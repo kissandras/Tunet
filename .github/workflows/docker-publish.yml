@@ -1,8 +1,17 @@
 name: Docker Publish
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v1.11.0). Leave empty to use current ref.'
+        required: false
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -16,8 +25,35 @@ jobs:
       packages: write
 
     steps:
+      - name: Resolve tag and version
+        id: vars
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.tag }}" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            echo "Could not determine a release tag for this run." >&2
+            exit 1
+          fi
+
+          VERSION="${TAG#v}"
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.vars.outputs.tag }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -32,10 +68,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !github.event.release.prerelease }}
-            type=raw,value=beta,enable=${{ github.event.release.prerelease }}
+            type=semver,pattern={{version}},value=${{ steps.vars.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.vars.outputs.version }}
+            type=raw,value=latest,enable=${{ steps.vars.outputs.prerelease != 'true' }}
+            type=raw,value=beta,enable=${{ steps.vars.outputs.prerelease == 'true' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6

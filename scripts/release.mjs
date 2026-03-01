@@ -16,9 +16,19 @@ const paths = {
   addonDockerfile: path.join(root, 'hassio-addon', 'Dockerfile'),
 };
 
+const releaseFiles = [
+  'package.json',
+  'package-lock.json',
+  'CHANGELOG.md',
+  'hassio-addon/config.yaml',
+  'hassio-addon/CHANGELOG.md',
+];
+
+const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
 function usage() {
   console.log(
-    `\nUsage:\n  npm run release:check\n  npm run release:prep -- --version 1.1.0 [--date 2026-02-14]\n  npm run release:publish\n`
+    `\nUsage:\n  npm run release:check\n  npm run release:prep -- --version 1.1.0 [--date 2026-02-14]\n  npm run release:cut [-- --publish]\n  npm run release:publish\n`
   );
 }
 
@@ -112,6 +122,44 @@ function extractMainChangelogNotes(changelog, appVersion) {
 
 function isPreRelease(version) {
   return /-(alpha|beta|rc)/i.test(version);
+}
+
+function normalizePath(filePath) {
+  return filePath.replace(/\\/g, '/');
+}
+
+async function runGit(args, options = {}) {
+  return execFileAsync('git', args, { cwd: root, ...options });
+}
+
+async function runNpmScript(scriptName) {
+  await execFileAsync(npmCmd, ['run', scriptName], {
+    cwd: root,
+    maxBuffer: 1024 * 1024 * 8,
+  });
+}
+
+async function getGitStatusFiles() {
+  const { stdout } = await runGit(['status', '--porcelain']);
+  const lines = stdout
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter(Boolean);
+
+  return lines.map((line) => {
+    const rawPath = line.slice(3);
+    const resolvedPath = rawPath.includes(' -> ') ? rawPath.split(' -> ').at(-1) : rawPath;
+    return normalizePath(resolvedPath.trim());
+  });
+}
+
+async function hasStagedChanges() {
+  try {
+    await runGit(['diff', '--cached', '--quiet']);
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 async function runPublish() {
@@ -248,6 +296,61 @@ async function runPrep(args) {
   console.log(`✅ Prepared release files: version=${version}, date=${releaseDate}`);
 }
 
+async function runCut(args) {
+  const pkg = await readJson(paths.pkg);
+  const appVersion = pkg.version;
+  if (!appVersion) fail('Missing package.json version.');
+
+  console.log('🔎 Running release checks...');
+  await runCheck();
+
+  console.log('🧪 Running test suite...');
+  await runNpmScript('test');
+
+  console.log('🏗️ Building project...');
+  await runNpmScript('build');
+
+  const changedFiles = await getGitStatusFiles();
+  if (!changedFiles.length) {
+    fail('No working tree changes found. Run release:prep first.');
+  }
+
+  const allowed = new Set(releaseFiles.map(normalizePath));
+  const unexpected = changedFiles.filter((file) => !allowed.has(file));
+  if (unexpected.length) {
+    fail(
+      `Release cut only allows metadata files to be changed. Unexpected changes: ${unexpected.join(', ')}`
+    );
+  }
+
+  await runGit(['add', ...releaseFiles]);
+
+  if (!(await hasStagedChanges())) {
+    fail('No staged metadata changes found after git add.');
+  }
+
+  const tag = `v${appVersion}`;
+
+  try {
+    await runGit(['rev-parse', '--verify', tag]);
+    fail(`Tag ${tag} already exists locally.`);
+  } catch {
+    // expected when tag does not exist
+  }
+
+  await runGit(['commit', '-m', `release: ${tag}`], { maxBuffer: 1024 * 1024 * 4 });
+  await runGit(['tag', '-a', tag, '-m', tag]);
+  await runGit(['push', 'origin', 'HEAD'], { maxBuffer: 1024 * 1024 * 4 });
+  await runGit(['push', 'origin', tag], { maxBuffer: 1024 * 1024 * 4 });
+
+  console.log(`✅ Created and pushed ${tag}.`);
+
+  if (args.publish) {
+    console.log('🚀 Publishing GitHub release...');
+    await runPublish();
+  }
+}
+
 async function main() {
   const command = process.argv[2];
   const args = parseArgs(process.argv.slice(3));
@@ -269,6 +372,11 @@ async function main() {
 
   if (command === 'publish') {
     await runPublish();
+    return;
+  }
+
+  if (command === 'cut') {
+    await runCut(args);
     return;
   }
 
