@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.11.2] — 2026-03-01
+
+### Changed
+- Added Room Card door/window status support, including editor domain filter, main-entity selection, and per-card visibility toggle.
+- Improved Room Card pill overflow behavior with progressive label collapse (status first, then all icon pills) to avoid third-line wrapping.
+- Refined icon-only Cover/Door pill sizing so height and compact-mode transitions match the rest of the pill row.
+- Fixed duplicate `vacuum.lastCleaned` translation keys in multiple locales (`en`, `nb`, `nn`, `sv`, `de`).
+
+
 ## [1.11.1] — 2026-03-01
 
 ### Changed
