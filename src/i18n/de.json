@@ -80,6 +80,8 @@
   "addCard.type.light": "Licht",
   "addCard.type.media": "Medien",
   "addCard.type.nordpool": "Nordpool",
+  "nordpool.graphLine": "Linie",
+  "nordpool.graphStyle": "Grafstil",
   "addCard.type.room": "Raum",
   "addCard.type.spacer": "Abstandhalter",
   "addCard.spacerDescription": "Füge einen Abstandhalter oder Teiler hinzu. Du kannst in den Einstellungen zwischen beiden wechseln.",

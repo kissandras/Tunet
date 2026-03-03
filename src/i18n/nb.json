@@ -1053,6 +1053,8 @@
   "addCard.type.sensor": "Sensor",
   "addCard.type.androidtv": "Android TV",
   "addCard.type.nordpool": "Nordpool",
+  "nordpool.graphLine": "Linje",
+  "nordpool.graphStyle": "Graftype",
   "nordpool.withSupport": "Med støtte",
   "nordpool.withoutSupport": "Uten støtte",
   "weatherTemp.effects": "Væreffekter",

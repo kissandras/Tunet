@@ -80,6 +80,8 @@
   "addCard.type.light": "Lys",
   "addCard.type.media": "Media",
   "addCard.type.nordpool": "Nordpool",
+  "nordpool.graphLine": "Linje",
+  "nordpool.graphStyle": "Graftype",
   "addCard.type.room": "Rom",
   "addCard.type.spacer": "Mellomrom",
   "addCard.spacerDescription": "Legg til eit mellomrom- eller skillekort. Du kan byte mellom mellomrom og skiljelinje i redigeringsinnstillingane.",

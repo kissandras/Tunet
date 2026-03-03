@@ -4075,6 +4075,30 @@ export default function EditCardModal({
 
               <div className="space-y-2">
                 <label className="ml-4 block pb-1 text-xs font-bold text-gray-500 uppercase">
+                  {t('nordpool.graphStyle') || 'Graph style'}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'line', label: t('nordpool.graphLine') || 'Line' },
+                    { key: 'bar', label: t('sensor.variantBar') || 'Bar' },
+                  ].map((variant) => (
+                    <button
+                      key={variant.key}
+                      onClick={() => saveCardSetting(editSettingsKey, 'graphStyle', variant.key)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                        (editSettings.graphStyle || 'line') === variant.key
+                          ? 'bg-[var(--accent-bg)] text-[var(--accent-color)]'
+                          : 'bg-[var(--glass-bg)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-hover)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {variant.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="ml-4 block pb-1 text-xs font-bold text-gray-500 uppercase">
                   {t('nordpool.withSupport') || 'Electricity Support'}
                 </label>
                 <div className="popup-surface flex items-center justify-between rounded-2xl p-4">

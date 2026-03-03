@@ -23,7 +23,13 @@ const createBezierPath = (points, smoothing = 0.3) => {
   }, '');
 };
 
-export default function SparkLine({ data, currentIndex, height = 40, fade = false }) {
+export default function SparkLine({
+  data,
+  currentIndex,
+  height = 40,
+  fade = false,
+  variant = 'line',
+}) {
   const pointsData = Array.isArray(data) ? data : [];
   const lineStrokeWidth = 3;
   const pointRadius = 3.5;
@@ -55,14 +61,102 @@ export default function SparkLine({ data, currentIndex, height = 40, fade = fals
 
   const pathData = createBezierPath(points, 0.3);
   const areaData = `${pathData} L ${width},${chartBottom} L 0,${chartBottom} Z`;
-  const currentPoint = points[currentIndex] || points[0];
+  const normalizedCurrentIndex =
+    Number.isInteger(currentIndex) && currentIndex >= 0 && currentIndex < values.length
+      ? currentIndex
+      : 0;
+  const currentPoint = points[normalizedCurrentIndex] || points[0];
 
-  const getDotColor = (val) => {
+  const getValueColor = (val) => {
     const t = (val - min) / range;
     if (t > 0.6) return '#ef4444';
     if (t > 0.3) return '#eab308';
     return '#3b82f6';
   };
+
+  if (variant === 'bar') {
+    const maxBars = 16;
+    const groupSize = Math.max(1, Math.ceil(values.length / maxBars));
+    const barValues =
+      groupSize === 1
+        ? values
+        : Array.from({ length: Math.ceil(values.length / groupSize) }, (_, groupIndex) => {
+            const start = groupIndex * groupSize;
+            const group = values.slice(start, start + groupSize);
+            return group.reduce((sum, value) => sum + value, 0) / Math.max(group.length, 1);
+          });
+    const activeBarIndex =
+      groupSize === 1 ? normalizedCurrentIndex : Math.floor(normalizedCurrentIndex / groupSize);
+    const slotWidth = width / Math.max(barValues.length, 1);
+    const barWidth = Math.max(3, Math.min(12, slotWidth - 1.5));
+
+    return (
+      <div className="relative mt-1 opacity-80 transition-all duration-700 group-hover:opacity-100">
+        <svg
+          width="100%"
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="none"
+          className="overflow-visible"
+        >
+          <defs>
+            <linearGradient id={areaId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {barValues.map((value, index) => {
+            const intensity = (value - min) / range;
+            const barHeight = Math.max(8, intensity * chartHeight);
+            const x = index * slotWidth + (slotWidth - barWidth) / 2;
+            const y = chartBottom - barHeight;
+            const isCurrent = index === activeBarIndex;
+            const fill = getValueColor(value);
+
+            return (
+              <g key={`bar-${index}`}>
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={barHeight}
+                  rx={Math.min(barWidth / 2, 3)}
+                  fill={fill}
+                  opacity={isCurrent ? 0.95 : 0.52}
+                />
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={Math.min(barHeight, 18)}
+                  rx={Math.min(barWidth / 2, 3)}
+                  fill={`url(#${areaId})`}
+                  opacity={isCurrent ? 0.5 : 0.25}
+                />
+                {isCurrent && (
+                  <rect
+                    x={Math.max(0, x - 1)}
+                    y={Math.max(0, y - 1)}
+                    width={Math.min(width - x + 1, barWidth + 2)}
+                    height={Math.min(height - y + 1, barHeight + 2)}
+                    rx={Math.min((barWidth + 2) / 2, 4)}
+                    fill="none"
+                    stroke={fill}
+                    strokeOpacity="0.9"
+                    strokeWidth="1.5"
+                  />
+                )}
+              </g>
+            );
+          })}
+        </svg>
+        {fade && (
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--glass-bg)] opacity-60" />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative mt-1 opacity-80 transition-all duration-700 group-hover:opacity-100">
@@ -118,7 +212,7 @@ export default function SparkLine({ data, currentIndex, height = 40, fade = fals
           cx={currentPoint[0]}
           cy={currentPoint[1]}
           r={pointRadius}
-          fill={getDotColor(values[currentIndex])}
+          fill={getValueColor(values[normalizedCurrentIndex])}
           className="animate-pulse"
         />
       </svg>

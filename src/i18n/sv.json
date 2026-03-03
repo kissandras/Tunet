@@ -80,6 +80,8 @@
   "addCard.type.light": "Ljus",
   "addCard.type.media": "Media",
   "addCard.type.nordpool": "Nordpool",
+  "nordpool.graphLine": "Linje",
+  "nordpool.graphStyle": "Graftyp",
   "addCard.type.room": "Rum",
   "addCard.type.spacer": "Mellanrum",
   "addCard.spacerDescription": "Lägg till ett mellanrum- eller avdelarkort. Du kan växla mellan mellanrum och avdelare i redigeringsinställningarna.",

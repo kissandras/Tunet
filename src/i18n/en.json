@@ -80,6 +80,8 @@
   "addCard.type.light": "Light",
   "addCard.type.media": "Media",
   "addCard.type.nordpool": "Nordpool",
+  "nordpool.graphLine": "Line",
+  "nordpool.graphStyle": "Graph style",
   "addCard.type.room": "Room",
   "addCard.type.spacer": "Spacer",
   "addCard.spacerDescription": "Add a spacer or divider card. You can switch between spacer and divider in the edit settings.",

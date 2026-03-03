@@ -80,6 +80,8 @@
   "addCard.type.light": "灯光",
   "addCard.type.media": "媒体",
   "addCard.type.nordpool": "Nordpool",
+  "nordpool.graphLine": "折线",
+  "nordpool.graphStyle": "图表样式",
   "addCard.type.room": "房间",
   "addCard.type.spacer": "间隔",
   "addCard.spacerDescription": "添加空白或分隔线卡片。可在编辑设置中切换。",

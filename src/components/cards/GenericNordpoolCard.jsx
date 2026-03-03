@@ -199,7 +199,12 @@ export default function GenericNordpoolCard({
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-0">
-        <SparkLine data={fullPriceData} currentIndex={currentPriceIndex} height={84} />
+        <SparkLine
+          data={fullPriceData}
+          currentIndex={currentPriceIndex}
+          height={84}
+          variant={settings.graphStyle === 'bar' ? 'bar' : 'line'}
+        />
       </div>
     </div>
   );
