@@ -186,6 +186,15 @@ async function runGit(args, options = {}) {
 }
 
 async function runNpmScript(scriptName) {
+  if (process.platform === 'win32') {
+    const comSpec = process.env.ComSpec || 'cmd.exe';
+    await execFileAsync(comSpec, ['/d', '/s', '/c', npmCmd, 'run', scriptName], {
+      cwd: root,
+      maxBuffer: 1024 * 1024 * 8,
+    });
+    return;
+  }
+
   await execFileAsync(npmCmd, ['run', scriptName], {
     cwd: root,
     maxBuffer: 1024 * 1024 * 8,
