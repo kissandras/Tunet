@@ -131,6 +131,7 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Weather / Temp
 
 **Best for:** quick weather context and temperature trends.
+<img width="390" height="230" alt="image" src="https://github.com/user-attachments/assets/1471bbc6-9038-46ec-b099-35cc926edc13" />
 
 - Weather entity + optional temperature source.
 - Unit-aware rendering (follows configured unit mode/HA mode).
@@ -139,6 +140,7 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Energy Cost
 
 **Best for:** daily/monthly spend overview.
+<img width="381" height="242" alt="image" src="https://github.com/user-attachments/assets/88e43dad-f439-4bee-90c3-eab049b1fef5" />
 
 - Today + month entity mapping.
 - Currency + display formatting options.
@@ -146,6 +148,7 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Nordpool
 
 **Best for:** hourly electricity price monitoring.
+<img width="371" height="236" alt="image" src="https://github.com/user-attachments/assets/de41e0e7-a364-4ada-85f0-c199a29ad4c3" />
 
 - Nordpool sensor selection.
 - Decimal precision and display formatting options.
@@ -153,6 +156,7 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Room
 
 **Best for:** compact room-level overview cards.
+<img width="375" height="243" alt="image" src="https://github.com/user-attachments/assets/570fc563-7fc4-400c-a971-23335ee876b2" />
 
 - Build room card from Home Assistant area.
 - Auto-suggested entities with optional manual mapping.
@@ -161,6 +165,7 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Car
 
 **Best for:** EV/vehicle status dashboards.
+<img width="382" height="236" alt="image" src="https://github.com/user-attachments/assets/42195012-5219-4e63-b02c-b6c995b095af" />
 
 - Card-level mapping for EV-related sensors (battery/range/charging/temp/location).
 - Optional custom image URL and per-sensor bindings.
@@ -175,6 +180,8 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Alarm
 
 **Best for:** alarm panel actions with integration-safe capability rendering.
+<img width="601" height="547" alt="image" src="https://github.com/user-attachments/assets/08e78daa-b151-4a4a-9679-cdf622950014" />
+<img width="1146" height="487" alt="image" src="https://github.com/user-attachments/assets/a9f8fc4f-311f-4ad4-9df7-5552ccf9a63f" />
 
 - Alarm entity selection.
 - Arm/disarm actions, with PIN flow where required.
@@ -183,6 +190,8 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Calendar
 
 **Best for:** upcoming events and agenda flows.
+<img width="400" height="481" alt="image" src="https://github.com/user-attachments/assets/c37bcc89-772f-4bc9-b28a-101b124890df" /><img width="392" height="478" alt="image" src="https://github.com/user-attachments/assets/d69733b7-4bfa-4130-80a1-2d49c1b2b0c4" />
+
 
 - Calendar entity/list selection.
 - Event rendering options from selected calendars.
@@ -190,6 +199,7 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Todo
 
 **Best for:** Home Assistant to-do workflows.
+<img width="1491" height="244" alt="image" src="https://github.com/user-attachments/assets/f2c8c686-de2e-43a9-8849-407d95f1157f" />
 
 - To-do list entity selection.
 - List item management in card/popup flow.
@@ -197,6 +207,7 @@ Practical guide to what each card is best for, what you can configure, and commo
 ### Spacer
 
 **Best for:** visual spacing and section separation in dense layouts.
+![Uploading image.png…]()
 
 - Variant: `spacer` or `divider`.
 - Layout/spacing behavior to structure dashboard sections.
