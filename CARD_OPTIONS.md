@@ -21,6 +21,7 @@ Detailed overview of each card type, where it fits, and what can be configured.
 ## Card-by-card options
 
 ### Sensor
+<img width="1484" height="245" alt="image" src="https://github.com/user-attachments/assets/82c14294-4bbd-4b92-80c3-bde40215b1c1" />
 
 - Entity selection (`sensor.*`, `binary_sensor.*`, plus supported helper domains).
 - Visual variant support (for numeric sensors): line/graph and gauge-like variants.
