@@ -3,6 +3,7 @@ import { X, Check, Plus, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import IconPicker from '../components/ui/IconPicker';
 import ConditionBuilder from '../components/ui/ConditionBuilder';
 import { getEntitiesForArea, getRelatedEntityIds } from '../services/haClient';
+import { buildCarAnchorOptions } from './editCard/carAnchorOptions';
 import { useConfig, useHomeAssistantMeta } from '../contexts';
 import {
   convertValueByKind,
@@ -1440,8 +1441,6 @@ export default function EditCardModal({
     });
   }, [pagesConfig, pageSettings]);
 
-  if (!isOpen) return null;
-
   const maxColSpan = gridColumns || 4;
   const effectiveUnitMode = getEffectiveUnitMode(unitsMode, haConfig);
   const tempDisplayUnit = getDisplayUnitForKind('temperature', effectiveUnitMode);
@@ -1539,116 +1538,48 @@ export default function EditCardModal({
   const chargeLimitNumberOptions = carMatch.options?.chargeLimitNumberId || [];
   const chargeLimitSelectOptions = carMatch.options?.chargeLimitSelectId || [];
   const chargeControlOptions = sortByName(carMatch.chargeControlIds || []);
-  const carAnchorOptions = React.useMemo(() => {
-    const candidateDomains = [
-      'device_tracker',
-      'sensor',
-      'binary_sensor',
-      'climate',
-      'lock',
-      'switch',
-      'button',
-      'number',
-      'select',
-      'input_number',
-      'input_select',
-    ];
-    const anchorKeywords = [
-      'car',
-      'vehicle',
-      'ev',
-      'battery',
-      'range',
-      'odometer',
-      'charge',
-      'charging',
-      'plug',
-      'climate',
-      'lock',
-      'tracker',
-      'location',
-    ];
+  const mappedCarAnchorCandidates = [
+    editSettings?.batteryId,
+    editSettings?.rangeId,
+    editSettings?.locationId,
+    editSettings?.chargingId,
+    editSettings?.climateId,
+    editSettings?.lockId,
+    editSettings?.updateButtonId,
+  ].filter(Boolean);
 
-    const mappedCandidates = [
-      editSettings?.batteryId,
-      editSettings?.rangeId,
-      editSettings?.locationId,
-      editSettings?.chargingId,
-      editSettings?.climateId,
-      editSettings?.lockId,
-      editSettings?.updateButtonId,
-    ].filter(Boolean);
+  const matcherCarAnchorCandidates = [
+    ...batteryOptions,
+    ...rangeOptions,
+    ...odometerOptions,
+    ...locationOptions,
+    ...latitudeOptions,
+    ...longitudeOptions,
+    ...chargingOptions,
+    ...pluggedOptions,
+    ...chargingPowerOptions,
+    ...chargeRateOptions,
+    ...timeToFullOptions,
+    ...chargeEndTimeOptions,
+    ...fuelLevelOptions,
+    ...climateOptions,
+    ...lockOptions,
+    ...ignitionSwitchOptions,
+    ...engineStatusOptions,
+    ...lastUpdatedOptions,
+    ...apiStatusOptions,
+    ...chargeLimitNumberOptions,
+    ...chargeLimitSelectOptions,
+    ...chargeControlOptions,
+    ...updateButtonOptions,
+  ];
 
-    const keywordCandidates = entityEntries
-      .filter(([id]) => candidateDomains.some((domain) => id.startsWith(`${domain}.`)))
-      .filter(([id, entity]) => {
-        const text = `${id} ${entity?.attributes?.friendly_name || ''}`.toLowerCase();
-        return anchorKeywords.some((keyword) => text.includes(keyword));
-      })
-      .map(([id]) => id);
-
-    const domainCandidates = entityEntries
-      .filter(([id]) => candidateDomains.some((domain) => id.startsWith(`${domain}.`)))
-      .map(([id]) => id);
-
-    const matcherCandidates = [
-      ...batteryOptions,
-      ...rangeOptions,
-      ...odometerOptions,
-      ...locationOptions,
-      ...latitudeOptions,
-      ...longitudeOptions,
-      ...chargingOptions,
-      ...pluggedOptions,
-      ...chargingPowerOptions,
-      ...chargeRateOptions,
-      ...timeToFullOptions,
-      ...chargeEndTimeOptions,
-      ...fuelLevelOptions,
-      ...climateOptions,
-      ...lockOptions,
-      ...ignitionSwitchOptions,
-      ...engineStatusOptions,
-      ...lastUpdatedOptions,
-      ...apiStatusOptions,
-      ...chargeLimitNumberOptions,
-      ...chargeLimitSelectOptions,
-      ...chargeControlOptions,
-      ...updateButtonOptions,
-    ];
-
-    const merged = Array.from(
-      new Set([...mappedCandidates, ...matcherCandidates, ...keywordCandidates])
-    );
-    if (merged.length > 0) return sortByName(merged);
-    return sortByName(Array.from(new Set(domainCandidates)));
-  }, [
+  const carAnchorOptions = buildCarAnchorOptions({
     entityEntries,
-    editSettings,
-    batteryOptions,
-    rangeOptions,
-    odometerOptions,
-    locationOptions,
-    latitudeOptions,
-    longitudeOptions,
-    chargingOptions,
-    pluggedOptions,
-    chargingPowerOptions,
-    chargeRateOptions,
-    timeToFullOptions,
-    chargeEndTimeOptions,
-    fuelLevelOptions,
-    climateOptions,
-    lockOptions,
-    ignitionSwitchOptions,
-    engineStatusOptions,
-    lastUpdatedOptions,
-    apiStatusOptions,
-    chargeLimitNumberOptions,
-    chargeLimitSelectOptions,
-    chargeControlOptions,
-    updateButtonOptions,
-  ]);
+    mappedCandidates: mappedCarAnchorCandidates,
+    matcherCandidates: matcherCarAnchorCandidates,
+    sortByName,
+  });
 
   const carAnchorEntityId = editSettings?.carAnchorEntityId || null;
 
@@ -1977,6 +1908,8 @@ export default function EditCardModal({
     // Always show all trackers too, to be safe
     return trackers;
   })();
+
+  if (!isOpen) return null;
 
   return (
     <div
