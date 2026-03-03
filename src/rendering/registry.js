@@ -20,8 +20,6 @@ import { renderCalendarCard } from './cards/calendarRenderer';
 import { renderTodoCard } from './cards/todoRenderer';
 import { renderNordpoolCard } from './cards/nordpoolRenderer';
 import { renderCoverCard } from './cards/coverRenderer';
-import {
-} from './cardRenderers';
 
 /**
  * Unified card renderer signature used by registry entries:
