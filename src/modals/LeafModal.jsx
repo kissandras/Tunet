@@ -259,13 +259,13 @@ export default function LeafModal({ show, onClose, entities, callService, getS, 
 
             {/* Climate Control */}
             {climateId && (
-              <div className="popup-surface mt-4 space-y-4 rounded-2xl p-4">
+              <div className="popup-surface mt-3 space-y-2.5 rounded-2xl p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`rounded-full p-1.5 ${isHeating ? 'bg-orange-500/20 text-orange-400' : 'bg-[var(--glass-bg)] text-gray-500'}`}
+                      className={`rounded-full p-1 ${isHeating ? 'bg-orange-500/20 text-orange-400' : 'bg-[var(--glass-bg)] text-gray-500'}`}
                     >
-                      <Thermometer className="h-4 w-4" />
+                      <Thermometer className="h-3.5 w-3.5" />
                     </div>
                     <div>
                       <p className="text-xs font-bold tracking-widest text-[var(--text-primary)] uppercase">
@@ -282,20 +282,20 @@ export default function LeafModal({ show, onClose, entities, callService, getS, 
                         entity_id: climateId,
                       })
                     }
-                    className={`relative h-8 w-14 rounded-full transition-all ${isHeating ? 'bg-orange-500' : 'bg-[var(--glass-border)]'}`}
+                    className={`relative h-7 w-12 rounded-full transition-all ${isHeating ? 'bg-orange-500' : 'bg-[var(--glass-border)]'}`}
                   >
                     <div
-                      className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-all ${isHeating ? 'left-[calc(100%-28px)]' : 'left-1'}`}
+                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${isHeating ? 'left-[calc(100%-24px)]' : 'left-1'}`}
                     />
                   </button>
                 </div>
 
-                <div className="space-y-3 border-t border-[var(--glass-border)]/50 pt-2">
+                <div className="space-y-2 border-t border-[var(--glass-border)]/50 pt-1.5">
                   <div className="flex items-end justify-between">
                     <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                       {t('car.target')}
                     </span>
-                    <span className="text-lg font-light text-[var(--text-primary)]">
+                    <span className="text-base font-light text-[var(--text-primary)]">
                       {formatUnitValue(displayTargetTempValue, {
                         kind: 'temperature',
                         fallback: '--',
@@ -323,10 +323,10 @@ export default function LeafModal({ show, onClose, entities, callService, getS, 
 
           {/* Right Column - Stats & Controls (Span 2) */}
           <div className="space-y-4 lg:col-span-2">
-            {/* Smaller Grid for Secondary Stats */}
+            {/* Primary Stats */}
             <div className="grid grid-cols-2 gap-3">
               {batteryId && (
-                <div className="popup-surface flex flex-col items-center justify-center gap-1 rounded-2xl p-4">
+                <div className="popup-surface flex flex-col items-center justify-center gap-1 rounded-2xl p-3.5">
                   <span className="mb-1 flex items-center gap-1 text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
                     {isCharging && <Zap className="h-3.5 w-3.5 animate-pulse text-green-400" />}
                     {t('car.battery')}
@@ -350,7 +350,7 @@ export default function LeafModal({ show, onClose, entities, callService, getS, 
               )}
 
               {rangeId && (
-                <div className="popup-surface flex flex-col items-center justify-center gap-1 rounded-2xl p-4">
+                <div className="popup-surface flex flex-col items-center justify-center gap-1 rounded-2xl p-3.5">
                   <span className="mb-1 text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
                     {t('car.range')}
                   </span>
@@ -362,89 +362,79 @@ export default function LeafModal({ show, onClose, entities, callService, getS, 
                   </div>
                 </div>
               )}
-              {(tempValue !== null || tempId) && (
-                <div className="popup-surface flex flex-col items-center justify-center gap-1 rounded-2xl p-4">
-                  <span className="mb-1 text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
-                    Temp
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-light text-[var(--text-primary)]">
-                      {formatUnitValue(displayTempValue, { kind: 'temperature', fallback: '--' })}
-                    </span>
-                    <span className="text-xs font-bold text-gray-500">{displayTempUnit}</span>
-                  </div>
-                </div>
-              )}
-              {odometerId && (
-                <div className="popup-surface flex flex-col items-center justify-center gap-1 rounded-2xl p-4">
-                  <span className="mb-1 text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
-                    Odo
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-light text-[var(--text-primary)]">
-                      {formatValue(odometerValue)}
-                    </span>
-                    <span className="text-xs font-bold text-gray-500">
-                      {entities[odometerId]?.attributes?.unit_of_measurement || displayRangeUnit}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {fuelLevelId && (
-                <div className="popup-surface flex flex-col items-center justify-center gap-1 rounded-2xl p-4">
-                  <span className="mb-1 text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
-                    Fuel
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-light text-[var(--text-primary)]">
-                      {formatValue(fuelLevelValue)}
-                    </span>
-                    <span className="text-xs font-bold text-gray-500">%</span>
-                  </div>
-                </div>
-              )}
             </div>
 
-            {(chargingPowerId || chargeRateId || timeToFullId || chargeEndTimeId) && (
-              <div className="popup-surface grid grid-cols-2 gap-2 rounded-2xl p-3">
+            {(tempValue !== null || tempId || odometerId || fuelLevelId || chargingPowerId || chargeRateId || timeToFullId || chargeEndTimeId) && (
+              <div className="popup-surface space-y-2 rounded-2xl p-3">
+                {(tempValue !== null || tempId) && (
+                  <div className="flex items-center justify-between rounded-xl bg-[var(--glass-bg)] px-3 py-2">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      {t('car.tempInside') || 'Temp'}
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
+                      {formatUnitValue(displayTempValue, { kind: 'temperature', fallback: '--' })}
+                      {displayTempUnit}
+                    </span>
+                  </div>
+                )}
+                {odometerId && (
+                  <div className="flex items-center justify-between rounded-xl bg-[var(--glass-bg)] px-3 py-2">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      Odo
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
+                      {formatValue(odometerValue)} {entities[odometerId]?.attributes?.unit_of_measurement || displayRangeUnit}
+                    </span>
+                  </div>
+                )}
+                {fuelLevelId && (
+                  <div className="flex items-center justify-between rounded-xl bg-[var(--glass-bg)] px-3 py-2">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      Fuel
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
+                      {formatValue(fuelLevelValue)}%
+                    </span>
+                  </div>
+                )}
                 {chargingPowerId && (
-                  <div className="rounded-xl bg-[var(--glass-bg)] px-3 py-2">
-                    <div className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                  <div className="flex items-center justify-between rounded-xl bg-[var(--glass-bg)] px-3 py-2">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                       Power
-                    </div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)]">
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
                       {chargingPowerValue ?? '--'}
-                    </div>
+                    </span>
                   </div>
                 )}
                 {chargeRateId && (
-                  <div className="rounded-xl bg-[var(--glass-bg)] px-3 py-2">
-                    <div className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                  <div className="flex items-center justify-between rounded-xl bg-[var(--glass-bg)] px-3 py-2">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                       Rate
-                    </div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)]">
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
                       {chargeRateValue ?? '--'}
-                    </div>
+                    </span>
                   </div>
                 )}
                 {timeToFullId && (
-                  <div className="rounded-xl bg-[var(--glass-bg)] px-3 py-2">
-                    <div className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                  <div className="flex items-center justify-between rounded-xl bg-[var(--glass-bg)] px-3 py-2">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                       Full in
-                    </div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)]">
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
                       {timeToFullValue ?? '--'}
-                    </div>
+                    </span>
                   </div>
                 )}
                 {chargeEndTimeId && (
-                  <div className="rounded-xl bg-[var(--glass-bg)] px-3 py-2">
-                    <div className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                  <div className="flex items-center justify-between rounded-xl bg-[var(--glass-bg)] px-3 py-2">
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                       End time
-                    </div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)]">
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
                       {chargeEndTimeValue ?? '--'}
-                    </div>
+                    </span>
                   </div>
                 )}
               </div>

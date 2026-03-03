@@ -276,7 +276,10 @@ function CarMappingsSection({
   editSettingsKey,
   saveCardSetting,
   entities,
-  suggestedFields,
+  anchorEntityId,
+  anchorOptions,
+  anchorRelatedEntityIds,
+  onAutoMapFromAnchor,
   batteryOptions,
   rangeOptions,
   odometerOptions,
@@ -304,6 +307,44 @@ function CarMappingsSection({
   const [showAddSensor, setShowAddSensor] = React.useState(false);
   const [sensorType, setSensorType] = React.useState('');
   const [sensorEntity, setSensorEntity] = React.useState('');
+  const [autoMapping, setAutoMapping] = React.useState(false);
+  const anchorRelatedSet = React.useMemo(
+    () => new Set(Array.isArray(anchorRelatedEntityIds) ? anchorRelatedEntityIds : []),
+    [anchorRelatedEntityIds]
+  );
+
+  const isEntityAllowedForType = React.useCallback(
+    (key, entityId) => {
+      if (!entityId) return false;
+      const domain = entityId.split('.')[0];
+
+      if (key === 'locationId') return domain === 'device_tracker';
+      if (key === 'latitudeId' || key === 'longitudeId') {
+        return ['sensor', 'input_number'].includes(domain);
+      }
+      if (key === 'chargingId' || key === 'pluggedId' || key === 'engineStatusId') {
+        return domain === 'binary_sensor';
+      }
+      if (key === 'chargingPowerId' || key === 'chargeRateId' || key === 'timeToFullId') {
+        return ['sensor', 'input_number'].includes(domain);
+      }
+      if (key === 'chargeEndTimeId' || key === 'apiStatusId' || key === 'lastUpdatedId') {
+        return ['sensor', 'binary_sensor', 'input_number'].includes(domain);
+      }
+      if (key === 'batteryId' || key === 'rangeId' || key === 'odometerId' || key === 'fuelLevelId') {
+        return ['sensor', 'input_number'].includes(domain);
+      }
+      if (key === 'climateId') return domain === 'climate';
+      if (key === 'lockId') return domain === 'lock';
+      if (key === 'ignitionSwitchId') return domain === 'switch';
+      if (key === 'chargeLimitNumberId') return domain === 'number';
+      if (key === 'chargeLimitSelectId') return ['select', 'input_select'].includes(domain);
+      if (key === 'chargeControlId') return ['switch', 'button'].includes(domain);
+      if (key === 'updateButtonId') return domain === 'button';
+      return true;
+    },
+    []
+  );
 
   const sensorTypes = [
     { key: 'batteryId', label: t('car.select.battery'), options: batteryOptions },
@@ -383,17 +424,14 @@ function CarMappingsSection({
     saveCardSetting(editSettingsKey, key, null);
   };
 
-  const handleAutoMap = () => {
-    if (!suggestedFields || typeof suggestedFields !== 'object') return;
-    sensorTypes.forEach((sensor) => {
-      if (editSettings[sensor.key]) return;
-      const suggested =
-        suggestedFields[sensor.key] ||
-        (sensor.key === 'chargingId' ? suggestedFields.chargingStateId : null);
-      if (suggested) {
-        saveCardSetting(editSettingsKey, sensor.key, suggested);
-      }
-    });
+  const handleAutoMapFromAnchor = async () => {
+    if (typeof onAutoMapFromAnchor !== 'function') return;
+    setAutoMapping(true);
+    try {
+      await onAutoMapFromAnchor(anchorEntityId);
+    } finally {
+      setAutoMapping(false);
+    }
   };
 
   return (
@@ -402,12 +440,44 @@ function CarMappingsSection({
         {t('car.mappingTitle')}: {t('car.mappingHint')}
       </div>
 
+      <div className="popup-surface space-y-2 rounded-2xl p-3">
+        <div className="ml-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+          {t('car.anchorEntity') || 'Anchor entity'}
+        </div>
+        <select
+          value={anchorEntityId || ''}
+          onChange={(e) =>
+            saveCardSetting(editSettingsKey, 'carAnchorEntityId', e.target.value || null)
+          }
+          className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+          style={{
+            backgroundColor: 'var(--card-bg)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--glass-border)',
+          }}
+        >
+          <option value="">{t('dropdown.noneSelected')}</option>
+          {anchorOptions.map((id) => (
+            <option key={id} value={id}>
+              {entities[id]?.attributes?.friendly_name || id}
+            </option>
+          ))}
+        </select>
+        <p className="ml-1 text-[10px] text-[var(--text-muted)]">
+          {t('car.anchorHint') ||
+            'Pick one entity from your car integration, then auto-map the rest from related entities.'}
+        </p>
+      </div>
+
       <button
-        onClick={handleAutoMap}
+        onClick={handleAutoMapFromAnchor}
+        disabled={autoMapping}
         className="popup-surface popup-surface-hover flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--glass-border)] px-4 py-3 text-xs font-bold tracking-widest text-[var(--text-primary)] uppercase transition-colors"
       >
         <RefreshCw className="h-3.5 w-3.5" />
-        {t('car.autoMap') || 'Auto map from entities'}
+        {autoMapping
+          ? t('profiles.autoSyncSyncing') || 'Syncing'
+          : t('car.autoMapFromAnchor') || 'Auto-map from anchor'}
       </button>
 
       {mappedSensors.length === 0 && (
@@ -514,16 +584,41 @@ function CarMappingsSection({
               const selectedType = sensorTypes.find((st) => st.key === sensorType);
               if (!selectedType) return null;
 
+              const scopedOptions = Array.from(anchorRelatedSet)
+                .filter((id) => entities[id])
+                .filter((id) => isEntityAllowedForType(selectedType.key, id))
+                .sort((a, b) =>
+                  (entities[a]?.attributes?.friendly_name || a).localeCompare(
+                    entities[b]?.attributes?.friendly_name || b
+                  )
+                );
+
+              const options = anchorEntityId ? scopedOptions : [];
+
               return (
-                <SearchableSelect
-                  label={t('car.selectEntity')}
-                  value={sensorEntity}
-                  options={selectedType.options}
-                  onChange={(value) => setSensorEntity(value)}
-                  placeholder={t('car.selectEntityPlaceholder')}
-                  entities={entities}
-                  t={t}
-                />
+                <div className="space-y-2">
+                  {!anchorEntityId && (
+                    <p className="ml-1 text-[10px] text-[var(--text-muted)]">
+                      {t('car.anchorRequiredForList') ||
+                        'Choose an anchor entity first to list entities from that integration.'}
+                    </p>
+                  )}
+                  {anchorEntityId && options.length === 0 && (
+                    <p className="ml-1 text-[10px] text-[var(--text-muted)]">
+                      {t('car.noEntitiesForAnchorType') ||
+                        'No matching entities found in the selected integration for this sensor type.'}
+                    </p>
+                  )}
+                  <SearchableSelect
+                    label={t('car.selectEntity')}
+                    value={sensorEntity}
+                    options={options}
+                    onChange={(value) => setSensorEntity(value)}
+                    placeholder={t('car.selectEntityPlaceholder')}
+                    entities={entities}
+                    t={t}
+                  />
+                </div>
               );
             })()}
 
@@ -1283,6 +1378,7 @@ export default function EditCardModal({
   const [showVisibilityLogic, setShowVisibilityLogic] = React.useState(false);
   const [showPopupLogic, setShowPopupLogic] = React.useState(false);
   const [registryVacuumSensorIds, setRegistryVacuumSensorIds] = React.useState([]);
+  const [carAnchorRelatedEntityIds, setCarAnchorRelatedEntityIds] = React.useState([]);
   const { unitsMode } = useConfig();
   const { haConfig } = useHomeAssistantMeta();
 
@@ -1311,6 +1407,28 @@ export default function EditCardModal({
       cancelled = true;
     };
   }, [isOpen, isEditVacuum, entityId, conn]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadCarAnchorRelated = async () => {
+      const anchorId = editSettings?.carAnchorEntityId;
+      if (!isOpen || !isEditCar || !anchorId || !conn) {
+        if (!cancelled) setCarAnchorRelatedEntityIds([]);
+        return;
+      }
+      try {
+        const ids = await getRelatedEntityIds(conn, anchorId);
+        if (!cancelled) setCarAnchorRelatedEntityIds(Array.isArray(ids) ? ids : []);
+      } catch {
+        if (!cancelled) setCarAnchorRelatedEntityIds([]);
+      }
+    };
+
+    void loadCarAnchorRelated();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isEditCar, editSettings?.carAnchorEntityId, conn]);
 
   const roomPageOptions = React.useMemo(() => {
     const pageIds = Array.isArray(pagesConfig?.pages) ? pagesConfig.pages : [];
@@ -1419,6 +1537,356 @@ export default function EditCardModal({
   const chargeLimitNumberOptions = carMatch.options?.chargeLimitNumberId || [];
   const chargeLimitSelectOptions = carMatch.options?.chargeLimitSelectId || [];
   const chargeControlOptions = sortByName(carMatch.chargeControlIds || []);
+  const carAnchorOptions = React.useMemo(() => {
+    const candidateDomains = [
+      'device_tracker',
+      'sensor',
+      'binary_sensor',
+      'climate',
+      'lock',
+      'switch',
+      'button',
+      'number',
+      'select',
+      'input_number',
+      'input_select',
+    ];
+    const anchorKeywords = [
+      'car',
+      'vehicle',
+      'ev',
+      'battery',
+      'range',
+      'odometer',
+      'charge',
+      'charging',
+      'plug',
+      'climate',
+      'lock',
+      'tracker',
+      'location',
+    ];
+
+    const mappedCandidates = [
+      editSettings?.batteryId,
+      editSettings?.rangeId,
+      editSettings?.locationId,
+      editSettings?.chargingId,
+      editSettings?.climateId,
+      editSettings?.lockId,
+      editSettings?.updateButtonId,
+    ].filter(Boolean);
+
+    const keywordCandidates = entityEntries
+      .filter(([id]) => candidateDomains.some((domain) => id.startsWith(`${domain}.`)))
+      .filter(([id, entity]) => {
+        const text = `${id} ${entity?.attributes?.friendly_name || ''}`.toLowerCase();
+        return anchorKeywords.some((keyword) => text.includes(keyword));
+      })
+      .map(([id]) => id);
+
+    const domainCandidates = entityEntries
+      .filter(([id]) => candidateDomains.some((domain) => id.startsWith(`${domain}.`)))
+      .map(([id]) => id);
+
+    const matcherCandidates = [
+      ...batteryOptions,
+      ...rangeOptions,
+      ...odometerOptions,
+      ...locationOptions,
+      ...latitudeOptions,
+      ...longitudeOptions,
+      ...chargingOptions,
+      ...pluggedOptions,
+      ...chargingPowerOptions,
+      ...chargeRateOptions,
+      ...timeToFullOptions,
+      ...chargeEndTimeOptions,
+      ...fuelLevelOptions,
+      ...climateOptions,
+      ...lockOptions,
+      ...ignitionSwitchOptions,
+      ...engineStatusOptions,
+      ...lastUpdatedOptions,
+      ...apiStatusOptions,
+      ...chargeLimitNumberOptions,
+      ...chargeLimitSelectOptions,
+      ...chargeControlOptions,
+      ...updateButtonOptions,
+    ];
+
+    const merged = Array.from(
+      new Set([...mappedCandidates, ...matcherCandidates, ...keywordCandidates])
+    );
+    if (merged.length > 0) return sortByName(merged);
+    return sortByName(Array.from(new Set(domainCandidates)));
+  }, [
+    entityEntries,
+    editSettings,
+    batteryOptions,
+    rangeOptions,
+    odometerOptions,
+    locationOptions,
+    latitudeOptions,
+    longitudeOptions,
+    chargingOptions,
+    pluggedOptions,
+    chargingPowerOptions,
+    chargeRateOptions,
+    timeToFullOptions,
+    chargeEndTimeOptions,
+    fuelLevelOptions,
+    climateOptions,
+    lockOptions,
+    ignitionSwitchOptions,
+    engineStatusOptions,
+    lastUpdatedOptions,
+    apiStatusOptions,
+    chargeLimitNumberOptions,
+    chargeLimitSelectOptions,
+    chargeControlOptions,
+    updateButtonOptions,
+  ]);
+
+  const carAnchorEntityId = editSettings?.carAnchorEntityId || null;
+
+  const autoPickCarAnchor = React.useCallback(() => {
+    if (!editSettingsKey) return null;
+
+    const preferredExistingKeys = [
+      'batteryId',
+      'rangeId',
+      'locationId',
+      'chargingId',
+      'climateId',
+      'lockId',
+      'updateButtonId',
+    ];
+    for (const key of preferredExistingKeys) {
+      const candidate = editSettings?.[key];
+      if (candidate && entities[candidate]) {
+        saveCardSetting(editSettingsKey, 'carAnchorEntityId', candidate);
+        return candidate;
+      }
+    }
+
+    const suggestedPriority = [
+      carMatch?.suggested?.locationId,
+      carMatch?.suggested?.batteryId,
+      carMatch?.suggested?.rangeId,
+      carMatch?.suggested?.chargingStateId,
+      carMatch?.suggested?.climateId,
+      carMatch?.suggested?.lockId,
+      carMatch?.suggested?.updateButtonId,
+    ].filter(Boolean);
+
+    const pickedSuggested = suggestedPriority.find((id) => entities[id]);
+    const fallback = carAnchorOptions[0] || null;
+    const chosen = pickedSuggested || fallback;
+    saveCardSetting(editSettingsKey, 'carAnchorEntityId', chosen || null);
+    return chosen;
+  }, [editSettingsKey, editSettings, entities, saveCardSetting, carMatch, carAnchorOptions]);
+
+  const autoMapCarFromAnchor = React.useCallback(
+    async (requestedAnchorId) => {
+      if (!editSettingsKey) return;
+
+      const anchorId = requestedAnchorId || carAnchorEntityId || autoPickCarAnchor();
+
+      let scopedMatch = carMatch;
+      let relatedEntityIds = [];
+      if (anchorId && conn && entities[anchorId]) {
+        try {
+          relatedEntityIds = await getRelatedEntityIds(conn, anchorId);
+          const scopedEntities = {};
+          for (const relatedId of relatedEntityIds || []) {
+            if (entities[relatedId]) scopedEntities[relatedId] = entities[relatedId];
+          }
+          if (entities[anchorId]) scopedEntities[anchorId] = entities[anchorId];
+          if (Object.keys(scopedEntities).length > 0) {
+            scopedMatch = matchCarEntities(scopedEntities);
+          }
+        } catch {
+          scopedMatch = carMatch;
+        }
+      }
+
+      const suggestions = scopedMatch?.suggested || {};
+      const relatedIdsSet = new Set(
+        (Array.isArray(relatedEntityIds) ? relatedEntityIds : []).filter((id) => entities[id])
+      );
+      if (anchorId && entities[anchorId]) relatedIdsSet.add(anchorId);
+
+      const pickFirstRelated = (predicate) => {
+        const ids = relatedIdsSet.size > 0 ? Array.from(relatedIdsSet) : Object.keys(entities || {});
+        return (
+          ids.find((id) => {
+            const entity = entities[id];
+            if (!entity) return false;
+            return predicate(id, entity);
+          }) || null
+        );
+      };
+
+      const hasKeyword = (id, entity, words) => {
+        const text = `${id} ${entity?.attributes?.friendly_name || ''}`.toLowerCase();
+        return words.some((word) => text.includes(word));
+      };
+
+      const fallbackSuggestions = {
+        batteryId: pickFirstRelated((id, entity) => {
+          if (!(id.startsWith('sensor.') || id.startsWith('input_number.'))) return false;
+          const deviceClass = String(entity?.attributes?.device_class || '').toLowerCase();
+          const unit = String(entity?.attributes?.unit_of_measurement || '').toLowerCase();
+          return (
+            deviceClass === 'battery' ||
+            (unit === '%' && hasKeyword(id, entity, ['battery', 'soc', 'charge']))
+          );
+        }),
+        rangeId: pickFirstRelated((id, entity) => {
+          if (!(id.startsWith('sensor.') || id.startsWith('input_number.'))) return false;
+          const deviceClass = String(entity?.attributes?.device_class || '').toLowerCase();
+          const unit = String(entity?.attributes?.unit_of_measurement || '').toLowerCase();
+          return (
+            deviceClass === 'distance' ||
+            ['km', 'mi', 'm'].includes(unit) ||
+            hasKeyword(id, entity, ['range', 'distance'])
+          );
+        }),
+        odometerId: pickFirstRelated((id, entity) =>
+          (id.startsWith('sensor.') || id.startsWith('input_number.')) &&
+          hasKeyword(id, entity, ['odometer', 'mileage', 'odo'])
+        ),
+        fuelLevelId: pickFirstRelated((id, entity) =>
+          (id.startsWith('sensor.') || id.startsWith('input_number.')) &&
+          hasKeyword(id, entity, ['fuel', 'tank'])
+        ),
+        locationId: pickFirstRelated((id) => id.startsWith('device_tracker.')),
+        latitudeId: pickFirstRelated((id, entity) => {
+          if (!(id.startsWith('sensor.') || id.startsWith('input_number.'))) return false;
+          const dc = String(entity?.attributes?.device_class || '').toLowerCase();
+          return dc === 'latitude' || hasKeyword(id, entity, ['latitude', 'lat']);
+        }),
+        longitudeId: pickFirstRelated((id, entity) => {
+          if (!(id.startsWith('sensor.') || id.startsWith('input_number.'))) return false;
+          const dc = String(entity?.attributes?.device_class || '').toLowerCase();
+          return dc === 'longitude' || hasKeyword(id, entity, ['longitude', 'lon', 'lng']);
+        }),
+        chargingStateId: pickFirstRelated((id, entity) => {
+          const dc = String(entity?.attributes?.device_class || '').toLowerCase();
+          return (
+            id.startsWith('binary_sensor.') &&
+            (dc === 'battery_charging' || hasKeyword(id, entity, ['charging', 'charger', 'charge']))
+          );
+        }),
+        pluggedId: pickFirstRelated((id, entity) => {
+          const dc = String(entity?.attributes?.device_class || '').toLowerCase();
+          return (
+            id.startsWith('binary_sensor.') &&
+            (dc === 'plug' || hasKeyword(id, entity, ['plug', 'connected']))
+          );
+        }),
+        chargingPowerId: pickFirstRelated((id, entity) => {
+          if (!(id.startsWith('sensor.') || id.startsWith('input_number.'))) return false;
+          const unit = String(entity?.attributes?.unit_of_measurement || '').toLowerCase();
+          return ['kw', 'w'].includes(unit) && hasKeyword(id, entity, ['charge', 'charging', 'power']);
+        }),
+        chargeRateId: pickFirstRelated((id, entity) => {
+          if (!(id.startsWith('sensor.') || id.startsWith('input_number.'))) return false;
+          const unit = String(entity?.attributes?.unit_of_measurement || '').toLowerCase();
+          return ['km/h', 'mi/h', 'mph'].includes(unit) || hasKeyword(id, entity, ['rate']);
+        }),
+        timeToFullId: pickFirstRelated((id, entity) =>
+          (id.startsWith('sensor.') || id.startsWith('input_number.')) &&
+          hasKeyword(id, entity, ['time_to_full', 'time to full', 'remaining_time'])
+        ),
+        chargeEndTimeId: pickFirstRelated((id, entity) =>
+          (id.startsWith('sensor.') || id.startsWith('input_number.')) &&
+          hasKeyword(id, entity, ['charge_end', 'ready_by', 'end_time'])
+        ),
+        climateId: pickFirstRelated((id) => id.startsWith('climate.')),
+        lockId: pickFirstRelated((id) => id.startsWith('lock.')),
+        ignitionSwitchId: pickFirstRelated((id, entity) =>
+          id.startsWith('switch.') && hasKeyword(id, entity, ['ignition', 'engine', 'vehicle_on'])
+        ),
+        engineStatusId: pickFirstRelated((id, entity) =>
+          id.startsWith('binary_sensor.') && hasKeyword(id, entity, ['engine', 'ignition', 'motor'])
+        ),
+        lastUpdatedId: pickFirstRelated((id, entity) =>
+          (id.startsWith('sensor.') || id.startsWith('input_number.')) &&
+          hasKeyword(id, entity, ['last_update', 'updated'])
+        ),
+        apiStatusId: pickFirstRelated((id, entity) =>
+          (id.startsWith('sensor.') || id.startsWith('binary_sensor.')) &&
+          hasKeyword(id, entity, ['api_status', 'service_status', 'vehicle_status'])
+        ),
+        chargeLimitNumberId: pickFirstRelated((id, entity) =>
+          id.startsWith('number.') && hasKeyword(id, entity, ['charge_limit', 'soc limit'])
+        ),
+        chargeLimitSelectId: pickFirstRelated((id, entity) =>
+          (id.startsWith('select.') || id.startsWith('input_select.')) &&
+          hasKeyword(id, entity, ['charge_limit', 'soc limit'])
+        ),
+        updateButtonId: pickFirstRelated((id, entity) =>
+          id.startsWith('button.') && hasKeyword(id, entity, ['update', 'refresh', 'poll'])
+        ),
+      };
+
+      const fieldKeys = [
+        'batteryId',
+        'rangeId',
+        'odometerId',
+        'fuelLevelId',
+        'locationId',
+        'latitudeId',
+        'longitudeId',
+        'chargingId',
+        'pluggedId',
+        'chargingPowerId',
+        'chargeRateId',
+        'timeToFullId',
+        'chargeEndTimeId',
+        'climateId',
+        'lockId',
+        'ignitionSwitchId',
+        'engineStatusId',
+        'lastUpdatedId',
+        'apiStatusId',
+        'chargeLimitNumberId',
+        'chargeLimitSelectId',
+        'updateButtonId',
+      ];
+
+      fieldKeys.forEach((key) => {
+        if (editSettings?.[key]) return;
+        const suggested =
+          suggestions[key] ||
+          (key === 'chargingId' ? suggestions.chargingStateId : null) ||
+          fallbackSuggestions[key] ||
+          (key === 'chargingId' ? fallbackSuggestions.chargingStateId : null);
+        if (suggested && entities[suggested]) {
+          saveCardSetting(editSettingsKey, key, suggested);
+        }
+      });
+
+      if (!editSettings?.chargeControlId && Array.isArray(scopedMatch?.chargeControlIds)) {
+        const firstChargeControl = scopedMatch.chargeControlIds.find((id) => entities[id]);
+        if (firstChargeControl) {
+          saveCardSetting(editSettingsKey, 'chargeControlId', firstChargeControl);
+        }
+      }
+    },
+    [
+      editSettingsKey,
+      carAnchorEntityId,
+      autoPickCarAnchor,
+      carMatch,
+      conn,
+      entities,
+      editSettings,
+      saveCardSetting,
+    ]
+  );
   const visibilityCondition = editSettings?.visibilityCondition || null;
   const normalizedVisibilityCondition = normalizeVisibilityConditionConfig(visibilityCondition);
   const visibilityEnabled =
@@ -2759,7 +3227,10 @@ export default function EditCardModal({
               editSettingsKey={editSettingsKey}
               saveCardSetting={saveCardSetting}
               entities={entities}
-              suggestedFields={carMatch.suggested}
+              anchorEntityId={carAnchorEntityId}
+              anchorOptions={carAnchorOptions}
+              anchorRelatedEntityIds={carAnchorRelatedEntityIds}
+              onAutoMapFromAnchor={autoMapCarFromAnchor}
               batteryOptions={batteryOptions}
               rangeOptions={rangeOptions}
               odometerOptions={odometerOptions}

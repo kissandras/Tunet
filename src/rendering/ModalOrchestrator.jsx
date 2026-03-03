@@ -1,7 +1,6 @@
 import { buildOnboardingSteps } from '../config/onboarding';
 import { useHomeAssistantMeta } from '../contexts';
 import { useProfiles } from '../hooks/useProfiles';
-import { matchCarEntities } from '../utils';
 import { ModalEntitySlice } from './modalSlices/ModalEntitySlice';
 import { ModalManagementSlice } from './modalSlices/ModalManagementSlice';
 import { ModalSettingsSlice } from './modalSlices/ModalSettingsSlice';
@@ -63,20 +62,14 @@ export default function ModalOrchestrator({
   } = appearance;
 
   const resolveCarSettings = (_cardId, settings = {}) => {
-    const matched = matchCarEntities(entities || {});
-    const suggested = matched.suggested || {};
-
     const hasSetting = (key) => Object.prototype.hasOwnProperty.call(settings, key);
-    const resolved = (key, suggestedKey = key) => {
-      if (hasSetting(key)) return settings[key];
-      return suggested[suggestedKey] ?? null;
-    };
+    const resolved = (key) => (hasSetting(key) ? settings[key] : null);
 
     const chargingStateId = hasSetting('chargingStateId')
       ? settings.chargingStateId
       : hasSetting('chargingId')
         ? settings.chargingId
-        : suggested.chargingStateId ?? null;
+        : null;
 
     return {
       ...settings,
@@ -103,10 +96,7 @@ export default function ModalOrchestrator({
       lastUpdatedId: resolved('lastUpdatedId'),
       apiStatusId: resolved('apiStatusId'),
       updateButtonId: resolved('updateButtonId'),
-      chargeControlIds:
-        hasSetting('chargeControlIds')
-          ? settings.chargeControlIds
-          : matched.chargeControlIds,
+      chargeControlIds: hasSetting('chargeControlIds') ? settings.chargeControlIds : [],
     };
   };
   const editModalProps = useEditModalProps({
