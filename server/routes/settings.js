@@ -34,6 +34,8 @@ const safeParseJson = (raw, fallback = null) => {
   }
 };
 
+const hasUsableBaseRevision = (value) => Number.isFinite(Number(value));
+
 const ensureRequestUser = (req, res) => {
   const requestUserId = req.authenticatedHaUser?.id;
   if (!requestUserId) {
@@ -71,9 +73,10 @@ const warnEncryptionWriteFailure = (context) => {
   console.warn(`[settings] Failed to produce encrypted payload in ${context}.`);
 };
 
-const pruneHistory = (haUserId, deviceId, keepLimitRaw) => {
+const pruneHistory = (database, haUserId, deviceId, keepLimitRaw) => {
   const keepLimit = resolveKeepLimit(keepLimitRaw);
-  db.prepare(
+  database
+    .prepare(
     `DELETE FROM current_settings_history
      WHERE ha_user_id = ?
        AND device_id = ?
@@ -83,7 +86,140 @@ const pruneHistory = (haUserId, deviceId, keepLimitRaw) => {
          ORDER BY revision DESC
          LIMIT ?
        )`
-  ).run(haUserId, deviceId, haUserId, deviceId, keepLimit);
+    )
+    .run(haUserId, deviceId, haUserId, deviceId, keepLimit);
+};
+
+export const writeCurrentSettingsSnapshot = ({
+  database = db,
+  haUserId,
+  deviceId,
+  data,
+  baseRevision,
+  historyKeepLimit,
+  deviceLabel,
+  now = new Date().toISOString(),
+}) => {
+  const payload = JSON.stringify(data);
+  const encryptedPayload = encryptDataText(payload);
+  if (encryptedPayload === null) {
+    warnEncryptionWriteFailure('put-current');
+    if (isEncryptionWriteRequired()) {
+      return {
+        ok: false,
+        status: 503,
+        error: 'Encryption is required but unavailable',
+      };
+    }
+  }
+
+  const plainPayload = shouldPersistPlaintextData() ? payload : getEncryptedOnlyPlaintextStub();
+  const requestedLabel = deviceLabel === undefined ? undefined : normalizeDeviceLabel(deviceLabel);
+
+  const writeTransaction = database.transaction(() => {
+    const existing = database
+      .prepare(
+        `SELECT revision, device_label FROM current_settings
+         WHERE ha_user_id = ? AND device_id = ?`
+      )
+      .get(haUserId, deviceId);
+
+    if (!existing) {
+      database
+        .prepare(
+          `INSERT INTO current_settings (ha_user_id, device_id, device_label, data, data_enc, revision, updated_at)
+           VALUES (?, ?, ?, ?, ?, 1, ?)`
+        )
+        .run(haUserId, deviceId, requestedLabel ?? null, plainPayload, encryptedPayload, now);
+
+      database
+        .prepare(
+          `INSERT OR REPLACE INTO current_settings_history (ha_user_id, device_id, revision, data, data_enc, updated_at)
+           VALUES (?, ?, 1, ?, ?, ?)`
+        )
+        .run(haUserId, deviceId, plainPayload, encryptedPayload, now);
+
+      pruneHistory(database, haUserId, deviceId, historyKeepLimit);
+
+      return {
+        ok: true,
+        revision: 1,
+        updated_at: now,
+      };
+    }
+
+    if (!hasUsableBaseRevision(baseRevision)) {
+      return {
+        ok: false,
+        status: 409,
+        error: 'Revision conflict',
+        revision: Number(existing.revision),
+      };
+    }
+
+    const expectedRevision = Number(baseRevision);
+    if (expectedRevision !== Number(existing.revision)) {
+      return {
+        ok: false,
+        status: 409,
+        error: 'Revision conflict',
+        revision: Number(existing.revision),
+      };
+    }
+
+    const nextRevision = Number(existing.revision) + 1;
+    const resolvedLabel =
+      deviceLabel === undefined ? existing.device_label || null : (requestedLabel ?? null);
+    const updateInfo = database
+      .prepare(
+        `UPDATE current_settings
+         SET data = ?, data_enc = ?, device_label = ?, revision = ?, updated_at = ?
+         WHERE ha_user_id = ? AND device_id = ? AND revision = ?`
+      )
+      .run(
+        plainPayload,
+        encryptedPayload,
+        resolvedLabel,
+        nextRevision,
+        now,
+        haUserId,
+        deviceId,
+        expectedRevision
+      );
+
+    if (!Number(updateInfo?.changes || 0)) {
+      const latest = database
+        .prepare(
+          `SELECT revision FROM current_settings
+           WHERE ha_user_id = ? AND device_id = ?`
+        )
+        .get(haUserId, deviceId);
+
+      return {
+        ok: false,
+        status: 409,
+        error: 'Revision conflict',
+        revision: Number(latest?.revision ?? existing.revision),
+      };
+    }
+
+    database
+      .prepare(
+        `INSERT OR REPLACE INTO current_settings_history (ha_user_id, device_id, revision, data, data_enc, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run(haUserId, deviceId, nextRevision, plainPayload, encryptedPayload, now);
+
+    pruneHistory(database, haUserId, deviceId, historyKeepLimit);
+
+    return {
+      ok: true,
+      revision: nextRevision,
+      updated_at: now,
+    };
+  });
+
+  return writeTransaction();
 };
 
 router.get('/current', (req, res) => {
@@ -321,74 +457,29 @@ router.put('/current', (req, res) => {
     return res.status(403).json({ error: 'Forbidden: user mismatch' });
   }
 
-  const existing = db
-    .prepare(
-      `SELECT revision, device_label FROM current_settings
-     WHERE ha_user_id = ? AND device_id = ?`
-    )
-    .get(ha_user_id, device_id);
+  const result = writeCurrentSettingsSnapshot({
+    database: db,
+    haUserId: ha_user_id,
+    deviceId: device_id,
+    data,
+    baseRevision: base_revision,
+    historyKeepLimit: history_keep_limit,
+    deviceLabel: device_label,
+  });
 
-  const now = new Date().toISOString();
-
-  if (!existing) {
-    const payload = JSON.stringify(data);
-    const encryptedPayload = encryptDataText(payload);
-    if (encryptedPayload === null) {
-      warnEncryptionWriteFailure('put-current:create');
-      if (isEncryptionWriteRequired()) {
-        return res.status(503).json({ error: 'Encryption is required but unavailable' });
-      }
-    }
-    const plainPayload = shouldPersistPlaintextData() ? payload : getEncryptedOnlyPlaintextStub();
-    const normalizedLabel = normalizeDeviceLabel(device_label);
-    db.prepare(
-      `INSERT INTO current_settings (ha_user_id, device_id, device_label, data, data_enc, revision, updated_at)
-       VALUES (?, ?, ?, ?, ?, 1, ?)`
-    ).run(ha_user_id, device_id, normalizedLabel, plainPayload, encryptedPayload, now);
-
-    db.prepare(
-      `INSERT OR REPLACE INTO current_settings_history (ha_user_id, device_id, revision, data, data_enc, updated_at)
-       VALUES (?, ?, 1, ?, ?, ?)`
-    ).run(ha_user_id, device_id, plainPayload, encryptedPayload, now);
-
-    pruneHistory(ha_user_id, device_id, history_keep_limit);
-
-    return res.json({ ha_user_id, device_id, revision: 1, updated_at: now });
-  }
-
-  if (base_revision !== undefined && Number(base_revision) !== Number(existing.revision)) {
-    return res.status(409).json({
-      error: 'Revision conflict',
-      revision: Number(existing.revision),
+  if (!result.ok) {
+    return res.status(result.status).json({
+      error: result.error,
+      ...(Number.isFinite(Number(result.revision)) ? { revision: Number(result.revision) } : {}),
     });
   }
 
-  const nextRevision = Number(existing.revision) + 1;
-  const payload = JSON.stringify(data);
-  const encryptedPayload = encryptDataText(payload);
-  if (encryptedPayload === null) {
-    warnEncryptionWriteFailure('put-current:update');
-    if (isEncryptionWriteRequired()) {
-      return res.status(503).json({ error: 'Encryption is required but unavailable' });
-    }
-  }
-  const plainPayload = shouldPersistPlaintextData() ? payload : getEncryptedOnlyPlaintextStub();
-  const normalizedLabel =
-    device_label === undefined ? existing.device_label || null : normalizeDeviceLabel(device_label);
-  db.prepare(
-    `UPDATE current_settings
-     SET data = ?, data_enc = ?, device_label = ?, revision = ?, updated_at = ?
-     WHERE ha_user_id = ? AND device_id = ?`
-  ).run(plainPayload, encryptedPayload, normalizedLabel, nextRevision, now, ha_user_id, device_id);
-
-  db.prepare(
-    `INSERT OR REPLACE INTO current_settings_history (ha_user_id, device_id, revision, data, data_enc, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(ha_user_id, device_id, nextRevision, plainPayload, encryptedPayload, now);
-
-  pruneHistory(ha_user_id, device_id, history_keep_limit);
-
-  return res.json({ ha_user_id, device_id, revision: nextRevision, updated_at: now });
+  return res.json({
+    ha_user_id,
+    device_id,
+    revision: result.revision,
+    updated_at: result.updated_at,
+  });
 });
 
 router.post('/publish', (req, res) => {
@@ -453,7 +544,7 @@ router.post('/publish', (req, res) => {
         `INSERT OR REPLACE INTO current_settings_history (ha_user_id, device_id, revision, data, data_enc, updated_at)
          VALUES (?, ?, 1, ?, ?, ?)`
       ).run(ha_user_id, deviceId, sourcePlainPayload, sourceEncryptedPayload, now);
-      pruneHistory(ha_user_id, deviceId, history_keep_limit);
+      pruneHistory(db, ha_user_id, deviceId, history_keep_limit);
       return 1;
     }
 
@@ -468,7 +559,7 @@ router.post('/publish', (req, res) => {
       `INSERT OR REPLACE INTO current_settings_history (ha_user_id, device_id, revision, data, data_enc, updated_at)
        VALUES (?, ?, ?, ?, ?, ?)`
     ).run(ha_user_id, deviceId, nextRevision, sourcePlainPayload, sourceEncryptedPayload, now);
-    pruneHistory(ha_user_id, deviceId, history_keep_limit);
+    pruneHistory(db, ha_user_id, deviceId, history_keep_limit);
     return 1;
   };
 

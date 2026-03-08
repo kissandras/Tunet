@@ -39,4 +39,15 @@ describe('getHomeAssistantRequestHeaders', () => {
       Authorization: 'Bearer session-token',
     });
   });
+
+  it('does not fall back to OAuth tokens when token auth is active', async () => {
+    localStorage.setItem('ha_auth_method', 'token');
+    localStorage.setItem('ha_url', 'http://localhost:8123');
+    loadTokensMock.mockReturnValue({ access_token: 'oauth-token' });
+
+    const { getHomeAssistantRequestHeaders } = await import('../services/apiAuth');
+    expect(getHomeAssistantRequestHeaders()).toEqual({
+      'x-ha-url': 'http://localhost:8123',
+    });
+  });
 });

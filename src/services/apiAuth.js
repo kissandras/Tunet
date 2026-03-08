@@ -6,14 +6,10 @@ const getStoredToken = () => {
     if (authMethod === 'oauth') {
       const oauthToken = loadTokens()?.access_token;
       if (oauthToken) return oauthToken;
+      return '';
     }
 
-    return (
-      globalThis.localStorage?.getItem('ha_token') ||
-      globalThis.sessionStorage?.getItem('ha_token') ||
-      loadTokens()?.access_token ||
-      ''
-    );
+    return globalThis.localStorage?.getItem('ha_token') || globalThis.sessionStorage?.getItem('ha_token') || '';
   } catch {
     return '';
   }

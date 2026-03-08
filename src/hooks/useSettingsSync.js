@@ -56,6 +56,8 @@ const getStoredDeviceLabel = () => {
   }
 };
 
+const READ_CURRENT_FAILED = Symbol('READ_CURRENT_FAILED');
+
 export function useSettingsSync({ haUserId, contextSettersRef }) {
   const deviceIdRef = useRef(getOrCreateDeviceId());
   const deviceLabelRef = useRef(getStoredDeviceLabel());
@@ -154,7 +156,7 @@ export function useSettingsSync({ haUserId, contextSettersRef }) {
     } catch (fetchError) {
       setStatus('error');
       setError(fetchError?.message || 'Failed to fetch current settings');
-      return null;
+      return READ_CURRENT_FAILED;
     }
   }, [haUserId]);
 
@@ -296,6 +298,12 @@ export function useSettingsSync({ haUserId, contextSettersRef }) {
       const row = await readCurrentFromServer();
       if (disposed) return;
 
+      if (row === READ_CURRENT_FAILED) {
+        await refreshKnownDevices();
+        await refreshHistory();
+        return;
+      }
+
       if (!row) {
         try {
           await pushCurrentToServer({ force: true });
@@ -341,6 +349,7 @@ export function useSettingsSync({ haUserId, contextSettersRef }) {
       const row = Number.isFinite(Number(revision))
         ? await apiFetchCurrentSettings(haUserId, deviceIdRef.current, Number(revision))
         : await readCurrentFromServer();
+      if (row === READ_CURRENT_FAILED) return;
       if (!row?.data || typeof row.data !== 'object') return;
 
       if (Number.isFinite(Number(row.revision))) {

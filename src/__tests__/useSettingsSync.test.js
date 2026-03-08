@@ -176,6 +176,20 @@ describe('useSettingsSync', () => {
     });
   });
 
+  it('does not register device when reading current settings fails', async () => {
+    fetchCurrentSettings.mockRejectedValueOnce(new Error('network down'));
+
+    const { result } = renderHook(() =>
+      useSettingsSync({ haUserId: 'user-1', contextSettersRef: { current: {} } })
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error');
+    });
+
+    expect(saveCurrentSettings).not.toHaveBeenCalled();
+  });
+
   it('syncNow pushes snapshot to server', async () => {
     const { result } = renderHook(() =>
       useSettingsSync({ haUserId: 'user-1', contextSettersRef: { current: {} } })
