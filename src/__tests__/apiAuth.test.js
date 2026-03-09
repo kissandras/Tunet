@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const loadTokensMock = vi.fn();
+const clearOAuthTokensMock = vi.fn();
 
 vi.mock('../services/oauthStorage', () => ({
   loadTokens: () => loadTokensMock(),
+  clearOAuthTokens: () => clearOAuthTokensMock(),
 }));
 
 describe('getHomeAssistantRequestHeaders', () => {
@@ -11,6 +13,7 @@ describe('getHomeAssistantRequestHeaders', () => {
     localStorage.clear();
     sessionStorage.clear();
     loadTokensMock.mockReset();
+    clearOAuthTokensMock.mockReset();
   });
 
   it('uses OAuth access tokens when OAuth auth is active', async () => {
@@ -49,5 +52,49 @@ describe('getHomeAssistantRequestHeaders', () => {
     expect(getHomeAssistantRequestHeaders()).toEqual({
       'x-ha-url': 'http://localhost:8123',
     });
+  });
+
+  it('prefers the live OAuth auth access token over storage', async () => {
+    localStorage.setItem('ha_auth_method', 'oauth');
+    localStorage.setItem('ha_url', 'https://ha.example');
+    loadTokensMock.mockReturnValue({ access_token: 'stale-token' });
+
+    const { getHomeAssistantRequestHeaders, setOAuthAuthProvider } = await import(
+      '../services/apiAuth'
+    );
+
+    setOAuthAuthProvider({ current: { accessToken: 'live-token' } });
+
+    expect(getHomeAssistantRequestHeaders()).toEqual({
+      'x-ha-url': 'https://ha.example',
+      Authorization: 'Bearer live-token',
+    });
+
+    setOAuthAuthProvider(null);
+  });
+
+  it('refreshes OAuth access token when requested asynchronously', async () => {
+    localStorage.setItem('ha_auth_method', 'oauth');
+    localStorage.setItem('ha_url', 'https://ha.example');
+    loadTokensMock.mockReturnValue({ access_token: 'stored-token' });
+    const refreshAccessToken = vi.fn(async function refresh() {
+      this.accessToken = 'refreshed-token';
+    });
+
+    const { getValidatedHomeAssistantRequestHeadersAsync, setOAuthAuthProvider } = await import(
+      '../services/apiAuth'
+    );
+
+    setOAuthAuthProvider({ current: { accessToken: 'old-live-token', refreshAccessToken } });
+
+    await expect(
+      getValidatedHomeAssistantRequestHeadersAsync({ forceRefreshOAuth: true })
+    ).resolves.toEqual({
+      'x-ha-url': 'https://ha.example',
+      Authorization: 'Bearer refreshed-token',
+    });
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+
+    setOAuthAuthProvider(null);
   });
 });

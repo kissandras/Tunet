@@ -5,19 +5,24 @@
  */
 
 import {
-  getValidatedHomeAssistantRequestHeaders,
+  getStoredAuthMethod,
+  getValidatedHomeAssistantRequestHeadersAsync,
   notifyHomeAssistantApiUnauthorized,
 } from './apiAuth';
 
 const API_BASE = './api';
 
-async function request(path, options = {}) {
-  const mergedHeaders = options.headers
-    ? {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      }
-    : { 'Content-Type': 'application/json' };
+async function request(
+  path,
+  options = {},
+  { retryOnOAuthUnauthorized = true, authHeadersOverride = null } = {}
+) {
+  const authHeaders = authHeadersOverride ?? (await getValidatedHomeAssistantRequestHeadersAsync());
+  const mergedHeaders = {
+    'Content-Type': 'application/json',
+    ...authHeaders,
+    ...options.headers,
+  };
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -25,6 +30,22 @@ async function request(path, options = {}) {
   });
 
   if (!res.ok) {
+    if (res.status === 401 && retryOnOAuthUnauthorized && getStoredAuthMethod() === 'oauth') {
+      const retryHeaders = await getValidatedHomeAssistantRequestHeadersAsync({
+        forceRefreshOAuth: true,
+      });
+      return request(
+        path,
+        {
+          ...options,
+        },
+        {
+          retryOnOAuthUnauthorized: false,
+          authHeadersOverride: retryHeaders,
+        }
+      );
+    }
+
     const body = await res.json().catch(() => ({}));
     if (res.status === 401) {
       throw notifyHomeAssistantApiUnauthorized(body.error || 'Home Assistant authentication failed');
@@ -38,26 +59,19 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-const requestHeaders = () => getValidatedHomeAssistantRequestHeaders();
-
 // ── Profiles ─────────────────────────────────────────────────────────
 
 export function fetchProfiles(haUserId) {
-  return request(`/profiles?ha_user_id=${encodeURIComponent(haUserId)}`, {
-    headers: requestHeaders(),
-  });
+  return request(`/profiles?ha_user_id=${encodeURIComponent(haUserId)}`, {});
 }
 
 export function fetchProfile(id, _haUserId) {
-  return request(`/profiles/${id}`, {
-    headers: requestHeaders(),
-  });
+  return request(`/profiles/${id}`, {});
 }
 
 export function createProfile({ ha_user_id, name, device_label, data }) {
   return request('/profiles', {
     method: 'POST',
-    headers: requestHeaders(),
     body: JSON.stringify({ ha_user_id, name, device_label, data }),
   });
 }
@@ -65,7 +79,6 @@ export function createProfile({ ha_user_id, name, device_label, data }) {
 export function updateProfile(id, { ha_user_id, name, device_label, data }) {
   return request(`/profiles/${id}`, {
     method: 'PUT',
-    headers: requestHeaders(),
     body: JSON.stringify({ ha_user_id, name, device_label, data }),
   });
 }
@@ -73,7 +86,6 @@ export function updateProfile(id, { ha_user_id, name, device_label, data }) {
 export function deleteProfile(id, _haUserId) {
   return request(`/profiles/${id}`, {
     method: 'DELETE',
-    headers: requestHeaders(),
   });
 }
 

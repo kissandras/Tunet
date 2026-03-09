@@ -2,13 +2,19 @@ import { clearOAuthTokens, loadTokens } from './oauthStorage';
 
 export const HOME_ASSISTANT_API_UNAUTHORIZED_EVENT = 'tunet:api-auth-unauthorized';
 
-const getStoredAuthMethod = () => {
+let oauthAuthProvider = null;
+
+export const getStoredAuthMethod = () => {
   try {
     return globalThis.localStorage?.getItem('ha_auth_method') || 'oauth';
   } catch {
     return 'oauth';
   }
 };
+
+const isOAuthAuthMethod = () => getStoredAuthMethod() === 'oauth';
+
+const getOAuthAuth = () => oauthAuthProvider?.current ?? null;
 
 const getStoredToken = () => {
   try {
@@ -23,6 +29,15 @@ const getStoredToken = () => {
   } catch {
     return '';
   }
+};
+
+const getCurrentOAuthAccessToken = () => {
+  const auth = getOAuthAuth();
+  if (typeof auth?.accessToken === 'string' && auth.accessToken) {
+    return auth.accessToken;
+  }
+
+  return loadTokens()?.access_token || '';
 };
 
 const clearStoredTokenAuth = () => {
@@ -64,6 +79,26 @@ export function notifyHomeAssistantApiUnauthorized(message = 'Home Assistant aut
   return createUnauthorizedError(message);
 }
 
+export function setOAuthAuthProvider(provider) {
+  oauthAuthProvider = provider ?? null;
+}
+
+export async function refreshOAuthAccessToken() {
+  if (!isOAuthAuthMethod()) {
+    return getStoredToken();
+  }
+
+  const auth = getOAuthAuth();
+  if (typeof auth?.refreshAccessToken === 'function') {
+    await auth.refreshAccessToken();
+    if (typeof auth?.accessToken === 'string' && auth.accessToken) {
+      return auth.accessToken;
+    }
+  }
+
+  return getCurrentOAuthAccessToken();
+}
+
 const getStoredUrl = () => {
   try {
     return globalThis.localStorage?.getItem('ha_url') || '';
@@ -84,7 +119,32 @@ export function getHomeAssistantRequestHeaders() {
   const headers = {};
   const haUrl = getStoredUrl();
   const fallbackUrl = getStoredFallbackUrl();
-  const accessToken = getStoredToken();
+  const accessToken = isOAuthAuthMethod() ? getCurrentOAuthAccessToken() : getStoredToken();
+
+  if (haUrl) {
+    headers['x-ha-url'] = haUrl;
+  }
+
+  if (fallbackUrl) {
+    headers['x-ha-fallback-url'] = fallbackUrl;
+  }
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  return headers;
+}
+
+export async function getHomeAssistantRequestHeadersAsync({ forceRefreshOAuth = false } = {}) {
+  const headers = {};
+  const haUrl = getStoredUrl();
+  const fallbackUrl = getStoredFallbackUrl();
+  const accessToken = forceRefreshOAuth
+    ? await refreshOAuthAccessToken()
+    : isOAuthAuthMethod()
+      ? getCurrentOAuthAccessToken()
+      : getStoredToken();
 
   if (haUrl) {
     headers['x-ha-url'] = haUrl;
@@ -108,6 +168,20 @@ export function hasHomeAssistantRequestAuth() {
 
 export function getValidatedHomeAssistantRequestHeaders() {
   const headers = getHomeAssistantRequestHeaders();
+
+  if (!headers['x-ha-url']) {
+    throw notifyHomeAssistantApiUnauthorized('Missing Home Assistant URL');
+  }
+
+  if (!headers.Authorization) {
+    throw notifyHomeAssistantApiUnauthorized('Missing Home Assistant bearer token');
+  }
+
+  return headers;
+}
+
+export async function getValidatedHomeAssistantRequestHeadersAsync(options = {}) {
+  const headers = await getHomeAssistantRequestHeadersAsync(options);
 
   if (!headers['x-ha-url']) {
     throw notifyHomeAssistantApiUnauthorized('Missing Home Assistant URL');

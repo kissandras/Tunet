@@ -1,17 +1,22 @@
 const API_BASE = './api';
 
 import {
-  getValidatedHomeAssistantRequestHeaders,
+  getStoredAuthMethod,
+  getValidatedHomeAssistantRequestHeadersAsync,
   notifyHomeAssistantApiUnauthorized,
 } from './apiAuth';
 
-async function request(path, options = {}) {
-  const mergedHeaders = options.headers
-    ? {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      }
-    : { 'Content-Type': 'application/json' };
+async function request(
+  path,
+  options = {},
+  { retryOnOAuthUnauthorized = true, authHeadersOverride = null } = {}
+) {
+  const authHeaders = authHeadersOverride ?? (await getValidatedHomeAssistantRequestHeadersAsync());
+  const mergedHeaders = {
+    'Content-Type': 'application/json',
+    ...authHeaders,
+    ...options.headers,
+  };
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -19,6 +24,22 @@ async function request(path, options = {}) {
   });
 
   if (!res.ok) {
+    if (res.status === 401 && retryOnOAuthUnauthorized && getStoredAuthMethod() === 'oauth') {
+      const retryHeaders = await getValidatedHomeAssistantRequestHeadersAsync({
+        forceRefreshOAuth: true,
+      });
+      return request(
+        path,
+        {
+          ...options,
+        },
+        {
+          retryOnOAuthUnauthorized: false,
+          authHeadersOverride: retryHeaders,
+        }
+      );
+    }
+
     const body = await res.json().catch(() => ({}));
     if (res.status === 401) {
       throw notifyHomeAssistantApiUnauthorized(body.error || 'Home Assistant authentication failed');
@@ -32,26 +53,20 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-const requestHeaders = () => getValidatedHomeAssistantRequestHeaders();
-
 export function fetchCurrentSettings(haUserId, deviceId, revision) {
   const revisionQuery = Number.isFinite(Number(revision))
     ? `&revision=${encodeURIComponent(revision)}`
     : '';
   return request(
     `/settings/current?ha_user_id=${encodeURIComponent(haUserId)}&device_id=${encodeURIComponent(deviceId)}${revisionQuery}`,
-    {
-      headers: requestHeaders(),
-    }
+    {}
   );
 }
 
 export function fetchSettingsHistory(haUserId, deviceId, limit = 20) {
   return request(
     `/settings/history?ha_user_id=${encodeURIComponent(haUserId)}&device_id=${encodeURIComponent(deviceId)}&limit=${encodeURIComponent(limit)}`,
-    {
-      headers: requestHeaders(),
-    }
+    {}
   );
 }
 
@@ -61,7 +76,6 @@ export function deleteSettingsHistory(haUserId, deviceId, keepLatest = true) {
     `/settings/history?ha_user_id=${encodeURIComponent(haUserId)}&device_id=${encodeURIComponent(deviceId)}&keep_latest=${keepLatestQuery}`,
     {
       method: 'DELETE',
-      headers: requestHeaders(),
     }
   );
 }
@@ -72,7 +86,6 @@ export function saveCurrentSettings(
 ) {
   return request('/settings/current', {
     method: 'PUT',
-    headers: requestHeaders(),
     body: JSON.stringify({
       ha_user_id,
       device_id,
@@ -86,9 +99,7 @@ export function saveCurrentSettings(
 }
 
 export function fetchCurrentDevices(haUserId) {
-  return request(`/settings/devices?ha_user_id=${encodeURIComponent(haUserId)}`, {
-    headers: requestHeaders(),
-  });
+  return request(`/settings/devices?ha_user_id=${encodeURIComponent(haUserId)}`, {});
 }
 
 export function deleteSettingsDevice(haUserId, deviceId) {
@@ -96,7 +107,6 @@ export function deleteSettingsDevice(haUserId, deviceId) {
     `/settings/devices?ha_user_id=${encodeURIComponent(haUserId)}&device_id=${encodeURIComponent(deviceId)}`,
     {
       method: 'DELETE',
-      headers: requestHeaders(),
     }
   );
 }
@@ -104,7 +114,6 @@ export function deleteSettingsDevice(haUserId, deviceId) {
 export function updateSettingsDeviceLabel(haUserId, deviceId, deviceLabel) {
   return request('/settings/devices/label', {
     method: 'PUT',
-    headers: requestHeaders(),
     body: JSON.stringify({
       ha_user_id: haUserId,
       device_id: deviceId,
@@ -121,7 +130,6 @@ export function publishCurrentSettings({
 }) {
   return request('/settings/publish', {
     method: 'POST',
-    headers: requestHeaders(),
     body: JSON.stringify({ ha_user_id, source_device_id, target_device_id, history_keep_limit }),
   });
 }

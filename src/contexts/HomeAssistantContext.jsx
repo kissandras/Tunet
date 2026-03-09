@@ -14,7 +14,7 @@ import {
   getAuth,
 } from 'home-assistant-js-websocket';
 import { saveTokens, loadTokens, clearOAuthTokens, hasOAuthTokens } from '../services/oauthStorage';
-import { HOME_ASSISTANT_API_UNAUTHORIZED_EVENT } from '../services/apiAuth';
+import { HOME_ASSISTANT_API_UNAUTHORIZED_EVENT, setOAuthAuthProvider } from '../services/apiAuth';
 import { isEntityDataStale } from '../utils';
 
 /** @typedef {import('../types/dashboard').EntityMap} EntityMap */
@@ -104,6 +104,13 @@ export const HomeAssistantProvider = ({ children, config }) => {
   const connectionRef = useRef(null);
   const unsubscribeEntitiesRef = useRef(null);
   const connectAttemptRef = useRef(0);
+
+  useEffect(() => {
+    setOAuthAuthProvider(authRef);
+    return () => {
+      setOAuthAuthProvider(null);
+    };
+  }, [authRef]);
 
   const cleanupConnection = useCallback((closeConnection = true) => {
     if (typeof unsubscribeEntitiesRef.current === 'function') {
