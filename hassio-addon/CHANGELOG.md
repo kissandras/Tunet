@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.0
+
+- Includes dashboard release `1.14.0`.
+- Hardens Profiles and Settings authorization by validating Home Assistant identity on the backend.
+- Restores Docker and add-on compatibility for protected backend calls with internal and fallback Home Assistant URL handling.
+- Improves multi-device settings sync with revision-checked conflict handling and immediate reconciliation.
+- Limits OAuth token persistence to the browser session and reduces lazy-loaded chunk failures by removing asset throttling.
+- Fixes Status Pills editor behavior when reselecting the same pill.
+
 ## 1.13.0
 
 - Includes dashboard release `1.13.0`.

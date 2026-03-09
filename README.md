@@ -33,7 +33,10 @@ A modern React dashboard for Home Assistant with real-time entity control, energ
 ### 🚀 Advanced Capabilities
 
 - **Server-side Profiles + Deploy**: Save layout configurations per user, load on any device, and publish/deploy current settings to selected devices.
+- **Validated Backend Auth**: Protected profile/settings API calls are verified against the authenticated Home Assistant user, not just browser-side state.
+- **Conflict-safe Settings Sync**: Multi-device settings updates use revision-aware sync to prevent stale tabs from overwriting newer layouts.
 - **Optional Data-at-Rest Encryption**: Encrypt server-stored profiles/settings with migration-safe compatibility modes.
+- **Session-scoped OAuth Storage**: OAuth tokens are kept in browser session storage instead of long-lived local storage.
 - **Dashboard Import/Export**: Portable JSON backup/restore directly from Profiles.
 - **Live Updates**: Instant state reflection via Home Assistant WebSocket.
 - **Drag-and-Drop Grid**: Fully customizable masonry layout.
@@ -77,6 +80,14 @@ npm run dev:all
 See [SETUP.md](SETUP.md) for detailed setup, configuration, and troubleshooting.
 See [CARD_OPTIONS.md](CARD_OPTIONS.md) for card-by-card options and screenshots.
 See [CSS_VARIABLES.md](src/docs/CSS_VARIABLES.md) for theme token naming and usage.
+
+## Release 1.14.0 Highlights
+
+- Hardened backend authorization for Profiles and Settings API routes.
+- Improved multi-device settings sync conflict handling and recovery.
+- Reduced OAuth token persistence by keeping browser OAuth tokens session-scoped.
+- Fixed production lazy-loaded chunk failures caused by asset throttling.
+- Stabilized modal, drag-and-drop, and onboarding E2E flows.
 
 ## Technologies
 

@@ -106,6 +106,8 @@ Notes for Profiles / Settings Sync:
 - Protected backend routes now validate your Home Assistant identity on the server, not just in the browser.
 - In Docker, the backend must be able to reach Home Assistant from inside the container. If your main HA URL is browser-only, set a token-mode fallback URL that is reachable from Docker.
 - Typical examples: use a LAN IP or an internal hostname as fallback when the primary URL is `localhost`, `.local`, or an external-only hostname.
+- Settings sync is revision-checked. If two tabs/devices save at the same time, the server will return a conflict instead of silently overwriting newer settings.
+- OAuth browser sessions are now session-scoped. Reloading the same tab keeps OAuth available, but a brand-new browser session may require signing in again.
 
 ### Media browsing prerequisites
 
@@ -120,7 +122,7 @@ For a detailed overview of card types, available options, and screenshots, see [
 Where data lives:
 
 - Dashboard/layout/theme/language: browser `localStorage` (`tunet_*` keys) by default; can also be saved/restored via Profiles (server-side) per HA user.
-- HA credentials: `ha_url`, `ha_token` (or OAuth tokens) stored locally.
+- HA credentials: `ha_url`, `ha_token` stored locally; OAuth tokens are stored in browser session storage.
 - Profiles: server-side SQLite (`server/db.js`, default `data/` dir).
 
 ## Environment Variables
@@ -200,3 +202,5 @@ npm run release
 ```
 
 The `release:check` step is also enforced in CI on `main` PRs/pushes.
+
+For this release, the synchronized app/add-on version is `1.14.0`.
