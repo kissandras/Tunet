@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.14.9] — 2026-03-18
+
+### Fixed
+- Kept the Status Pills editor open while creating a new pill, so the right-side form no longer disappears during parent rerenders.
+
+
 ## [1.14.8] — 2026-03-16
 
 ### Changed
@@ -44,12 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Prevent spurious logouts when the backend fails to connect to the Home Assistant URL (#106).
-
-
-## [1.14.3] — 2026-03-09
-
-### Changed
-- Improved mobile-friendly layouts for the first batch of cards: Alarm, Android TV, Car, Climate, Cover, Cost, Fan, Light, Media, Nordpool, Room, and Vacuum.
 
 
 ## [1.14.2] — 2026-03-09

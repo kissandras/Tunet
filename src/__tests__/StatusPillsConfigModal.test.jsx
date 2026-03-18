@@ -12,6 +12,7 @@ const t = (key) => {
     'statusPills.title': 'Status Pills',
     'statusPills.yourPills': 'Your Pills',
     'statusPills.editor': 'Edit Pill',
+    'statusPills.addNewPill': 'Add new pill',
     'statusPills.typeSensor': 'Sensor',
     'statusPills.show': 'Show',
     'statusPills.hide': 'Hide',
@@ -27,6 +28,48 @@ const t = (key) => {
 };
 
 describe('StatusPillsConfigModal', () => {
+  it('keeps a new pill draft open across parent rerenders', async () => {
+    const props = {
+      show: true,
+      onClose: () => {},
+      onSave: () => {},
+      entities: {
+        'sensor.living_room': {
+          attributes: { friendly_name: 'Living Room Sensor' },
+        },
+      },
+      statusPillsConfig: [],
+      t,
+    };
+
+    let rendered;
+    await act(async () => {
+      rendered = render(<StatusPillsConfigModal {...props} />);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Add new pill'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Sensor'));
+    });
+
+    const pillNameInput = screen.getByPlaceholderText('Pill name');
+
+    await act(async () => {
+      fireEvent.change(pillNameInput, { target: { value: 'Draft pill' } });
+    });
+
+    await act(async () => {
+      rendered.rerender(<StatusPillsConfigModal {...props} statusPillsConfig={[]} />);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByPlaceholderText('Pill name')).toHaveValue('Draft pill');
+  });
+
   it('keeps the editor open when the selected pill is clicked again', async () => {
     await act(async () => {
       render(

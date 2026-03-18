@@ -75,29 +75,29 @@ export default function StatusPillsConfigModal({
   }, []);
 
   useEffect(() => {
-    if (show) {
-      setPills(statusPillsConfig.map((p, i) => ({ ...p, id: p.id || `pill_${i}` })));
-      setEditingPill(null);
-      setMobilePane('list');
-      setPillSearch('');
-      setEntitySearch('');
-      setDataSourcePreviewSearch('');
-      setShowMediaSourcePreviewList(false);
-      setShowEntityPicker(false);
-      setShowIconPicker(false);
+    if (!show) return undefined;
 
-      let cancelled = false;
-      preloadMdiIcons()
-        .then(() => {
-          if (!cancelled) setMdiLoadedVersion((prev) => prev + 1);
-        })
-        .catch(() => {});
+    setPills(statusPillsConfig.map((p, i) => ({ ...p, id: p.id || `pill_${i}` })));
+    setEditingPill(null);
+    setMobilePane('list');
+    setPillSearch('');
+    setEntitySearch('');
+    setDataSourcePreviewSearch('');
+    setShowMediaSourcePreviewList(false);
+    setShowEntityPicker(false);
+    setShowIconPicker(false);
 
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [show, statusPillsConfig]);
+    let cancelled = false;
+    preloadMdiIcons()
+      .then(() => {
+        if (!cancelled) setMdiLoadedVersion((prev) => prev + 1);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [show]);
 
   if (!show) return null;
 
