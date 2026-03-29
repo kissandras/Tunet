@@ -31,7 +31,7 @@ function normalizeStreamEngine(value) {
   return 'auto';
 }
 
-const CameraCard = memo(function CameraCard({
+const CameraCard = memo(/** @param {any} props */ function CameraCard({
   cardId,
   entityId,
   entity,

@@ -29,7 +29,7 @@ import {
  * @param {Function} props.getEntityImageUrl - Get entity image URL
  * @param {Function} props.isMediaActive - Check if media is active
  */
-const StatusPill = memo(function StatusPill({
+const StatusPill = memo(/** @param {any} props */ function StatusPill({
   pill,
   entity,
   onClick,

@@ -10,7 +10,7 @@ class TodoErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, message: error?.message || 'Todo error' };
+    return { hasError: true, message: error?.message || '' };
   }
 
   componentDidCatch(error, info) {
@@ -19,11 +19,12 @@ class TodoErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const { t } = this.props;
       return (
         <div className="flex h-full flex-col rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)] p-5 text-[var(--status-error-fg)]">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5" />
-            <span className="text-sm font-semibold">Todo error</span>
+            <span className="text-sm font-semibold">{t?.('error.cardCrash') || 'Card Error'}</span>
           </div>
           <p className="mt-2 text-xs opacity-80">{this.state.message}</p>
         </div>
@@ -33,7 +34,7 @@ class TodoErrorBoundary extends React.Component {
   }
 }
 
-const TodoCard = memo(function TodoCard({
+const TodoCard = memo(/** @param {any} props */ function TodoCard({
   cardId,
   settings,
   conn,
@@ -399,7 +400,7 @@ function formatDueDate(due, t) {
 
 export default function TodoCardWithBoundary(props) {
   return (
-    <TodoErrorBoundary>
+    <TodoErrorBoundary t={props.t}>
       <TodoCard {...props} />
     </TodoErrorBoundary>
   );

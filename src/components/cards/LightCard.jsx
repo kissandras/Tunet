@@ -5,6 +5,7 @@ import M3Slider from '../ui/M3Slider';
 
 const SLIDER_DEBOUNCE_MS = 200;
 
+/** @param {any} props */
 const LightCard = ({
   cardId,
   dragProps,

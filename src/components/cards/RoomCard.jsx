@@ -23,7 +23,7 @@ import {
  * RoomCard – shows a summary of a Home Assistant area (room).
  * Redesigned with elegant glass styling and animated control switching.
  */
-const RoomCard = memo(function RoomCard({
+const RoomCard = memo(/** @param {any} props */ function RoomCard({
   cardId,
   settings,
   entities,
@@ -219,7 +219,7 @@ const RoomCard = memo(function RoomCard({
     tempEntity?.attributes?.unit_of_measurement ||
     climateEntity?.attributes?.temperature_unit ||
     climateEntity?.attributes?.unit_of_measurement ||
-    haConfig?.unit_system?.temperature ||
+    /** @type {any} */ (haConfig?.unit_system)?.temperature ||
     haConfig?.temperature_unit ||
     '°C';
   const displayTempUnit = getDisplayUnitForKind('temperature', effectiveUnitMode);

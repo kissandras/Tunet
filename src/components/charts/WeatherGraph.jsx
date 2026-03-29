@@ -73,7 +73,7 @@ export default function WeatherGraph({
       const now = new Date();
 
       // Check if we already have a point very close to now (within 1 minute)
-      const hasClosePoint = points.some((p) => Math.abs(p.time - now) < 60000);
+      const hasClosePoint = points.some((p) => Math.abs(p.time.getTime() - now.getTime()) < 60000);
 
       if (!hasClosePoint) {
         points.push({
@@ -139,7 +139,7 @@ export default function WeatherGraph({
     const values = Array.isArray(colorLimits) ? colorLimits : [0, 10, 20, 28];
     const normalized = values
       .map((value, index) => {
-        const parsed = parseFloat(value);
+        const parsed = parseFloat(String(value));
         return Number.isFinite(parsed) ? parsed : [0, 10, 20, 28][index];
       })
       .slice(0, 4);

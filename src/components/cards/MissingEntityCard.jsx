@@ -4,7 +4,7 @@ import { AlertTriangle } from '../../icons';
 /**
  * Placeholder card shown in edit mode when an entity is missing or broken.
  */
-const MissingEntityCard = memo(function MissingEntityCard({
+const MissingEntityCard = memo(/** @param {any} props */ function MissingEntityCard({
   cardId,
   dragProps,
   controls,

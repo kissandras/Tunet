@@ -36,7 +36,7 @@ const getWeatherInfo = (condition, t) => {
   return map[condition] || { label: condition || 'Unknown', icon: 'not-available' };
 };
 
-const WeatherTempCard = memo(function WeatherTempCard({
+const WeatherTempCard = memo(/** @param {any} props */ function WeatherTempCard({
   cardId,
   dragProps,
   getControls,
@@ -79,7 +79,7 @@ const WeatherTempCard = memo(function WeatherTempCard({
   const sourceTempUnit =
     tempEntity?.attributes?.unit_of_measurement ||
     weatherEntity?.attributes?.temperature_unit ||
-    haConfig?.unit_system?.temperature ||
+    /** @type {any} */ (haConfig?.unit_system)?.temperature ||
     '°C';
   const displayTempUnit = getDisplayUnitForKind('temperature', effectiveUnitMode);
   const displayTempValue = convertValueByKind(currentTemp, {

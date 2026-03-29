@@ -434,4 +434,19 @@
  * @property {import('react').Dispatch<import('react').SetStateAction<boolean>>} setShowOnboarding
  */
 
+/**
+ * @typedef {Object} CardBaseProps
+ * @property {string} cardId
+ * @property {Record<string, any>} dragProps
+ * @property {import('react').ReactNode} controls
+ * @property {import('react').CSSProperties} cardStyle
+ * @property {boolean} editMode
+ * @property {boolean} [isMobile]
+ * @property {EntityMap} [entities]
+ * @property {Record<string, string>} [customNames]
+ * @property {Record<string, string>} [customIcons]
+ * @property {(key: string) => string} t
+ * @property {(...args: any[]) => void} [onOpen]
+ */
+
 export {};

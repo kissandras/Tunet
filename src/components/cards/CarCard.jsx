@@ -34,6 +34,7 @@ const formatValue = (num) => {
 
 /* ─── CarCard ─── */
 
+/** @param {any} props */
 const CarCard = ({
   cardId,
   dragProps,
@@ -262,7 +263,7 @@ const CarCard = ({
             alt=""
             className={`pointer-events-none h-20 w-auto object-contain opacity-80 drop-shadow-lg select-none ${useCompactMetrics ? 'max-w-[38%]' : 'max-w-[45%]'}`}
             onError={(e) => {
-              e.target.style.display = 'none';
+              /** @type {HTMLElement} */ (e.target).style.display = 'none';
             }}
           />
         )}

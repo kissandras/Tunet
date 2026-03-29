@@ -44,7 +44,7 @@ async function request(
     if (res.status === 401) {
       throw notifyHomeAssistantApiUnauthorized(body.error || 'Home Assistant authentication failed');
     }
-    const error = new Error(body.error || `API error ${res.status}`);
+    const error = /** @type {any} */ (new Error(body.error || `API error ${res.status}`));
     error.status = res.status;
     error.body = body;
     throw error;

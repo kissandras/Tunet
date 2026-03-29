@@ -9,13 +9,13 @@ export default function M3Slider({
   colorClass: propColorClass = 'bg-[var(--accent-color)]',
   disabled = false,
   variant = 'default',
-  trackClass,
-  thumbClass,
-  height,
+  trackClass = '',
+  thumbClass = '',
+  height = undefined,
   ariaLabel = 'Slider',
-  ariaValueText,
-  id,
-  name,
+  ariaValueText = undefined,
+  id = undefined,
+  name = undefined,
 }) {
   const generatedId = useId();
   const inputId = id || `m3-slider-${generatedId.replace(/:/g, '')}`;
@@ -79,7 +79,7 @@ export default function M3Slider({
     id: inputId,
     name: inputName,
     'aria-label': ariaLabel,
-    'aria-orientation': 'horizontal',
+    'aria-orientation': /** @type {const} */ ('horizontal'),
     'aria-valuemin': min,
     'aria-valuemax': max,
     'aria-valuenow': internalValue,

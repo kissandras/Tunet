@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-/** @param {Record<string, unknown>} deps */
+/** @param {any} deps */
 export function useGuardedUiActions(deps) {
   const {
     requestSettingsAccess,

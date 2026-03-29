@@ -19,7 +19,7 @@ const formatMonthValue = (entity) => {
   return String(getEntityValue(entity));
 };
 
-const GenericEnergyCostCard = memo(function GenericEnergyCostCard({
+const GenericEnergyCostCard = memo(/** @param {any} props */ function GenericEnergyCostCard({
   cardId,
   todayEntityId,
   monthEntityId,

@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Tv, Play, Pause } from '../../icons';
 import { getMediaLogoUrl } from '../../utils/mediaLogos';
 
-const GenericAndroidTVCard = memo(function GenericAndroidTVCard({
+const GenericAndroidTVCard = memo(/** @param {any} props */ function GenericAndroidTVCard({
   cardId,
   dragProps,
   controls,

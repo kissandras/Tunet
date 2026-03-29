@@ -41,7 +41,7 @@ const getFanSpeedLevel = (fanMode, fanModes) => {
   return Math.max(1, Math.min(5, scaledLevel));
 };
 
-const GenericClimateCard = memo(function GenericClimateCard({
+const GenericClimateCard = memo(/** @param {any} props */ function GenericClimateCard({
   cardId,
   entityId,
   entity,
@@ -66,7 +66,7 @@ const GenericClimateCard = memo(function GenericClimateCard({
   const currentTemp = entity.attributes?.current_temperature ?? '--';
   const targetTemp = entity.attributes?.temperature ?? '--';
   const sourceTempUnit =
-    haConfig?.unit_system?.temperature || entity.attributes?.temperature_unit || '°C';
+    /** @type {any} */ (haConfig?.unit_system)?.temperature || entity.attributes?.temperature_unit || '°C';
   const effectiveUnitMode = getEffectiveUnitMode(unitsMode, haConfig);
   const displayCurrentTemp = formatKindValueForDisplay(currentTemp, {
     kind: 'temperature',

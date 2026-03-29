@@ -199,9 +199,9 @@ export function usePopupTriggers({
   modalActions,
   enabled = true,
 }) {
-  const previousMatchRef = useRef({});
-  const seenTriggerRef = useRef({});
-  const lastOpenedAtRef = useRef({});
+  const previousMatchRef = useRef(/** @type {Record<string, boolean>} */ ({}));
+  const seenTriggerRef = useRef(/** @type {Record<string, boolean>} */ ({}));
+  const lastOpenedAtRef = useRef(/** @type {Record<string, number>} */ ({}));
   const autoCloseTimerRef = useRef(null);
   const isInitializedRef = useRef(false);
   const hasLoadedEntitiesRef = useRef(false);
@@ -241,8 +241,11 @@ export function usePopupTriggers({
 
     const cardIds = Array.isArray(pagesConfig?.[activePage]) ? pagesConfig[activePage] : [];
     const nextMatchState = { ...previousMatchRef.current };
+    /** @type {string | null} */
     let cardToOpen = null;
+    /** @type {any} */
     let cardSettingsToOpen = null;
+    /** @type {string | null} */
     let triggerIdToOpen = null;
     const startupSuppressed = now < suppressUntilRef.current;
 
@@ -265,6 +268,7 @@ export function usePopupTriggers({
         condition,
         entity: fallbackEntity,
         entities,
+        getAttribute: undefined,
         fallbackEntityId,
       });
 

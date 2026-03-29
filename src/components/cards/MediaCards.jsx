@@ -15,7 +15,7 @@ import { getMediaPlayerPowerAction } from '../../utils/mediaPlayerFeatures';
 
 /* ─── Single media player card ─── */
 
-export const MediaPlayerCard = memo(({
+export const MediaPlayerCard = memo(/** @param {any} props */ ({
   cardId,
   mpId,
   dragProps,
@@ -269,7 +269,7 @@ export const MediaPlayerCard = memo(({
 
 /* ─── Media group card (multiple players) ─── */
 
-export const MediaGroupCard = memo(({
+export const MediaGroupCard = memo(/** @param {any} props */ ({
   cardId,
   dragProps,
   controls,

@@ -4,7 +4,7 @@ import { Zap } from '../../icons';
 import { getIconComponent } from '../../icons';
 import { useHomeAssistantMeta } from '../../contexts';
 
-const GenericNordpoolCard = memo(function GenericNordpoolCard({
+const GenericNordpoolCard = memo(/** @param {any} props */ function GenericNordpoolCard({
   cardId,
   dragProps,
   controls,

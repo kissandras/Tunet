@@ -50,7 +50,7 @@ async function request(
     if (res.status === 401) {
       throw notifyHomeAssistantApiUnauthorized(body.error || 'Home Assistant authentication failed');
     }
-    const error = new Error(body.error || `API error ${res.status}`);
+    const error = /** @type {any} */ (new Error(body.error || `API error ${res.status}`));
     error.status = res.status;
     error.body = body;
     throw error;
@@ -76,7 +76,7 @@ export function createProfile({ ha_user_id, name, device_label, data }) {
   });
 }
 
-export function updateProfile(id, { ha_user_id, name, device_label, data }) {
+export function updateProfile(id, { ha_user_id, name, device_label = null, data = null }) {
   return request(`/profiles/${id}`, {
     method: 'PUT',
     body: JSON.stringify({ ha_user_id, name, device_label, data }),

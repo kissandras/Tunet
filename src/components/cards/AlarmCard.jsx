@@ -145,7 +145,7 @@ function getStateVisual(state) {
   };
 }
 
-const AlarmCard = memo(function AlarmCard({
+const AlarmCard = memo(/** @param {any} props */ function AlarmCard({
   cardId,
   entityId,
   entity,

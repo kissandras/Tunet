@@ -28,7 +28,7 @@ const supportsFeature = (supportedFeatures, bitMask) => {
   return (supportedFeatures & bitMask) !== 0;
 };
 
-const FanCard = memo(function FanCard({
+const FanCard = memo(/** @param {any} props */ function FanCard({
   fanId,
   dragProps,
   controls,

@@ -7,7 +7,7 @@ import {
   isSonosPage as _isSonosPage,
 } from '../utils/cardUtils';
 
-/** @param {Record<string, unknown>} deps */
+/** @param {any} deps */
 export function useDashboardStateCoordinator(deps) {
   const {
     entities,

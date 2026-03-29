@@ -25,7 +25,7 @@ const DEFAULT_SENSOR_COLOR_THRESHOLDS = [
   { limit: 100, color: 'green' },
 ];
 
-const SensorCard = memo(function SensorCard({
+const SensorCard = memo(/** @param {any} props */ function SensorCard({
   entity,
   entities = {},
   conn,

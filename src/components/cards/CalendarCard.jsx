@@ -33,7 +33,7 @@ class CalendarErrorBoundary extends React.Component {
   }
 }
 
-const CalendarCard = memo(function CalendarCard({
+const CalendarCard = memo(/** @param {any} props */ function CalendarCard({
   cardId,
   settings,
   conn,
@@ -147,7 +147,7 @@ const CalendarCard = memo(function CalendarCard({
         allEvents = allEvents.filter((evt) => evt && evt.start);
 
         // Sort by start time
-        allEvents.sort((a, b) => getEventDate(a.start) - getEventDate(b.start));
+        allEvents.sort((a, b) => getEventDate(a.start).getTime() - getEventDate(b.start).getTime());
         setEvents(allEvents);
       } catch (err) {
         console.error('Failed to fetch calendar events', err);
@@ -368,7 +368,7 @@ const CalendarCard = memo(function CalendarCard({
       const end = endRaw ? new Date(endRaw) : null;
       if (!start) return null;
       const top = Math.max(0, getTimePosition(start));
-      const duration = end ? (end - start) / 3600000 : 1;
+      const duration = end ? (end.getTime() - start.getTime()) / 3600000 : 1;
       const height = Math.max(20, duration * HOUR_HEIGHT);
       return { top, height, start, end };
     };
