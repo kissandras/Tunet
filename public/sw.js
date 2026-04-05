@@ -1,12 +1,32 @@
 // Minimal service worker for PWA installability
-// Serves cached shell for offline, delegates everything else to network
+// Serves cached shell offline and caches immutable build assets at runtime.
 
-const CACHE_NAME = 'tunet-shell-v1';
+const SHELL_CACHE_NAME = 'tunet-shell-v2';
+const ASSET_CACHE_NAME = 'tunet-assets-v1';
 const SHELL_ASSETS = ['./', './index.html'];
+
+function isBuildAssetRequest(request) {
+  if (request.method !== 'GET') return false;
+
+  const url = new URL(request.url);
+  return url.origin === self.location.origin && url.pathname.includes('/assets/');
+}
+
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response.ok) {
+    cache.put(request, response.clone());
+  }
+  return response;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(SHELL_CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS))
   );
   self.skipWaiting();
 });
@@ -16,7 +36,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => ![SHELL_CACHE_NAME, ASSET_CACHE_NAME].includes(key))
           .map((key) => caches.delete(key))
       )
     )
@@ -30,5 +50,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request).catch(() => caches.match('./index.html'))
     );
+    return;
+  }
+
+  if (isBuildAssetRequest(event.request)) {
+    event.respondWith(cacheFirst(event.request, ASSET_CACHE_NAME));
   }
 });

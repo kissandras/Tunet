@@ -43,6 +43,7 @@ import {
   requestTokensFromOtherTabs,
   subscribeToOAuthTokenChanges,
 } from './services/oauthStorage';
+import { scheduleLikelyModalPrefetch } from './utils/prefetchModals';
 
 /** @typedef {import('./types/dashboard').AppContentProps} AppContentProps */
 
@@ -148,6 +149,12 @@ export function AppContent({ showOnboarding, setShowOnboarding }) {
     },
     [language, translations]
   );
+
+  useEffect(() => {
+    if (!entitiesLoaded) return undefined;
+    return scheduleLikelyModalPrefetch();
+  }, [entitiesLoaded]);
+
   const resolvedHeaderTitle = headerTitle || t('page.home');
 
   // Modal state management

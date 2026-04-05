@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { normalizeModalOverlayStyle } from './modalStyles';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -106,8 +107,10 @@ export default function AccessibleModalShell({
 
   if (!open) return null;
 
+  const resolvedOverlayStyle = normalizeModalOverlayStyle(overlayStyle);
+
   return (
-    <div className={overlayClassName} style={overlayStyle} onClick={onClose}>
+    <div className={overlayClassName} style={resolvedOverlayStyle} onClick={onClose}>
       <div
         ref={panelRef}
         role="dialog"
