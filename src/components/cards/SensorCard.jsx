@@ -438,6 +438,7 @@ const SensorCard = memo(/** @param {any} props */ function SensorCard({
   );
 
   const renderControls = () => {
+    // Select entities always show the dropdown since it is the primary interaction
     if (isSelectDomain && selectOptions.length > 0) {
       if (isSmall) {
         return (
