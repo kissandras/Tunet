@@ -50,6 +50,18 @@ export async function getHistory(
   return Array.isArray(historyData) ? historyData : [];
 }
 
+export function canUseHistoryRest(baseUrl, currentOrigin = globalThis?.window?.location?.origin) {
+  if (!baseUrl) return false;
+  if (!currentOrigin) return true;
+
+  try {
+    const targetUrl = new URL(baseUrl, currentOrigin);
+    return targetUrl.origin === currentOrigin;
+  } catch {
+    return false;
+  }
+}
+
 export async function getHistoryRest(
   baseUrl,
   token,

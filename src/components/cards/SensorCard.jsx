@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { Minus, Plus, Activity, Play, ChevronDown } from 'lucide-react';
+import { Minus, Plus, Activity, Play, List } from 'lucide-react';
 import { getHistory, getStatistics } from '../../services/haClient';
 import SparkLine from '../charts/SparkLine';
 import { Gauge, Donut, Bar } from '../charts/SensorGauge';
+import ModernDropdown from '../ui/ModernDropdown';
 import { useConfig, useHomeAssistantMeta } from '../../contexts';
 import {
   convertValueByKind,
@@ -420,9 +421,10 @@ const SensorCard = memo(/** @param {any} props */ function SensorCard({
   const isToggleDomain =
     domain === 'input_boolean' || domain === 'switch' || domain === 'automation';
   const showToggleControls = isToggleDomain && showControls;
-  const useStackedSmallControls = useDenseMobileSmallLayout && (showToggleControls || showControls);
   const showCompactMobileToggleState = isMobile && showToggleControls && showStatus && !isNumeric;
   const useCompactMobileToggleLayout = useDenseMobileLargeLayout && showToggleControls;
+  const useCompactSelectLayout = isSelectDomain && !isSmall;
+  const useCompactDesktopSelectLayout = useCompactSelectLayout && !useDenseMobileLargeLayout;
   const compactToggleStateTone = isUnavailable
     ? 'border-[var(--status-error-border)] bg-[var(--status-error-bg)] text-[var(--status-error-fg)]'
     : state === 'on'
@@ -437,41 +439,46 @@ const SensorCard = memo(/** @param {any} props */ function SensorCard({
     </span>
   );
 
+  const renderSelectDropdown = (compact = false) => (
+    <ModernDropdown
+      label={translate('sensor.select.label')}
+      icon={compact ? undefined : List}
+      options={selectOptions}
+      current={state || ''}
+      onChange={(option) => onControl('select_option', option)}
+      placeholder={translate('sensor.select.label')}
+      labelHidden
+      variant="compact"
+      menuPortal
+      menuAlign="end"
+      menuMinWidth={compact ? 180 : 220}
+      stopPropagation
+      wrapperClassName={compact ? 'w-auto' : 'w-full'}
+      buttonClassName={
+        compact
+          ? `${useDenseMobileSmallLayout ? 'min-w-[4.75rem] max-w-[7rem] px-2.5 py-2' : 'min-w-[5.5rem] max-w-[7.5rem] px-3 py-2.5'} rounded-xl`
+          : `${useCompactSelectLayout ? 'rounded-xl px-3 py-2.5' : 'rounded-2xl px-3.5 py-3'} w-full`
+      }
+      valueClassName={
+        compact
+          ? 'max-w-[4.5rem] text-[9px] tracking-[0.16em]'
+          : `${useCompactSelectLayout ? 'text-[9px] tracking-[0.16em]' : 'text-[10px] tracking-[0.18em]'} max-w-full`
+      }
+      menuClassName={compact ? 'shadow-[0_18px_48px_rgba(0,0,0,0.35)]' : ''}
+      optionClassName={compact ? 'text-[10px]' : 'text-[11px]'}
+    />
+  );
+
   const renderControls = () => {
     // Select entities always show the dropdown since it is the primary interaction
     if (isSelectDomain && selectOptions.length > 0) {
       if (isSmall) {
-        return (
-          <div className="flex flex-shrink-0 items-center">
-            <ChevronDown className="h-3 w-3 text-[var(--text-secondary)]" />
-          </div>
-        );
+        return renderSelectDropdown(true);
       }
 
       return (
-        <div className="mt-4 w-full">
-          <div className="relative">
-            <select
-              value={state || ''}
-              onChange={(e) => {
-                e.stopPropagation();
-                onControl('select_option', e.target.value);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full appearance-none rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] py-2.5 pr-8 pl-3 text-xs font-bold tracking-widest text-[var(--text-primary)] uppercase outline-none transition-colors hover:bg-[var(--glass-bg-hover)]"
-            >
-              {selectOptions.map((option) => (
-                <option
-                  key={option}
-                  value={option}
-                  style={{ backgroundColor: 'var(--modal-bg)', color: 'var(--text-primary)' }}
-                >
-                  {option}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-secondary)]" />
-          </div>
+        <div className={`${useCompactSelectLayout ? 'mt-2.5' : 'mt-4'} w-full`}>
+          {renderSelectDropdown()}
         </div>
       );
     }
@@ -726,7 +733,7 @@ const SensorCard = memo(/** @param {any} props */ function SensorCard({
       onClick={(e) => {
         if (!editMode) onOpen?.(e);
       }}
-      className={`touch-feedback group relative flex h-full flex-col overflow-hidden rounded-3xl border font-sans transition-all duration-500 ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'p-4' : 'p-5') : 'p-7'} ${useCompactMobileToggleLayout ? 'justify-start' : 'justify-between'} ${!editMode ? 'cursor-pointer' : 'cursor-move'}`}
+      className={`touch-feedback group relative flex h-full flex-col overflow-hidden rounded-3xl border font-sans transition-all duration-500 ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'p-4' : 'p-5') : useCompactDesktopSelectLayout ? 'p-5' : 'p-7'} ${(useCompactMobileToggleLayout || useCompactSelectLayout) ? 'justify-start' : 'justify-between'} ${!editMode ? 'cursor-pointer' : 'cursor-move'}`}
       style={cardStyle}
     >
       {controls}
@@ -742,26 +749,26 @@ const SensorCard = memo(/** @param {any} props */ function SensorCard({
       )}
 
       <div
-        className={`relative z-10 flex shrink-0 items-start justify-between ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'gap-2.5' : 'gap-3') : ''}`}
+        className={`relative z-10 flex shrink-0 items-start justify-between ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'gap-2.5' : 'gap-3') : useCompactDesktopSelectLayout ? 'gap-2.5' : ''}`}
       >
         <div className="flex min-w-0 flex-col items-start">
           {showIcon ? (
             <div
-              className={`flex items-center justify-center ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-9 w-9 rounded-xl' : 'h-10 w-10 rounded-xl') : 'h-11 w-11 rounded-2xl'} ${iconToneClass} transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}
+              className={`flex items-center justify-center ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-9 w-9 rounded-xl' : 'h-10 w-10 rounded-xl') : useCompactDesktopSelectLayout ? 'h-10 w-10 rounded-xl' : 'h-11 w-11 rounded-2xl'} ${iconToneClass} transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}
             >
               {Icon ? (
-                <Icon className={`${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-[15px] w-[15px]' : 'h-4 w-4') : 'h-5 w-5'} stroke-[1.5px]`} />
+                <Icon className={`${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-[15px] w-[15px]' : 'h-4 w-4') : useCompactDesktopSelectLayout ? 'h-4 w-4' : 'h-5 w-5'} stroke-[1.5px]`} />
               ) : (
-                <Activity className={useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-[15px] w-[15px]' : 'h-4 w-4') : 'h-5 w-5'} />
+                <Activity className={useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-[15px] w-[15px]' : 'h-4 w-4') : useCompactDesktopSelectLayout ? 'h-4 w-4' : 'h-5 w-5'} />
               )}
             </div>
           ) : (
-            <div className={useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-9 w-9' : 'h-10 w-10') : 'h-11 w-11'} />
+            <div className={useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'h-9 w-9' : 'h-10 w-10') : useCompactDesktopSelectLayout ? 'h-10 w-10' : 'h-11 w-11'} />
           )}
 
           {!useDenseMobileLargeLayout && showName && (
             <p
-              className="mt-2 w-full text-xs font-bold tracking-wide text-[var(--text-secondary)] uppercase opacity-60 line-clamp-2"
+              className={`${useCompactDesktopSelectLayout ? 'mt-1.5 text-[10px] leading-[1.15]' : 'mt-2 text-xs'} w-full font-bold tracking-wide text-[var(--text-secondary)] uppercase opacity-60 line-clamp-2`}
               title={String(name)}
             >
               {String(name)}
@@ -804,11 +811,11 @@ const SensorCard = memo(/** @param {any} props */ function SensorCard({
         </p>
       )}
 
-      <div className={`relative z-10 ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'mt-1' : useCompactMobileRangeLayout ? 'mt-1' : 'mt-2') : 'mt-4'} ${useCompactMobileToggleLayout ? 'mt-auto pt-2' : ''}`}>
+      <div className={`relative z-10 ${useDenseMobileLargeLayout ? (useCompactMobileToggleLayout ? 'mt-1' : useCompactMobileRangeLayout ? 'mt-1' : 'mt-2') : useCompactDesktopSelectLayout ? 'mt-2.5' : 'mt-4'} ${useCompactMobileToggleLayout ? 'mt-auto pt-2' : ''}`}>
         {domain !== 'input_number' && showStatus && !isNumeric && !showCompactMobileToggleState && (
-          <div className={useDenseMobileLargeLayout ? 'mb-2' : 'mb-3'}>
+          <div className={useDenseMobileLargeLayout ? 'mb-2' : useCompactDesktopSelectLayout ? 'mb-2' : 'mb-3'}>
             <span
-              className={`${useDenseMobileLargeLayout ? 'text-[1.4rem]' : 'text-3xl'} block truncate leading-none font-thin text-[var(--text-primary)]`}
+              className={`${useDenseMobileLargeLayout ? (isSelectDomain ? 'text-[1.2rem]' : 'text-[1.4rem]') : useCompactDesktopSelectLayout ? 'text-[2rem]' : 'text-3xl'} block truncate leading-none font-thin text-[var(--text-primary)]`}
             >
               {displayState}
             </span>
