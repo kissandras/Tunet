@@ -44,6 +44,14 @@ describe('useProfiles', () => {
     isValidSnapshot.mockReturnValue(true);
   });
 
+  it('does not prefetch profiles when disabled', () => {
+    renderHook(() =>
+      useProfiles({ haUser: { id: 'user-1' }, contextSetters: {}, prefetchProfiles: false })
+    );
+
+    expect(fetchProfiles).not.toHaveBeenCalled();
+  });
+
   it('saveProfile sends validated snapshot payload and prepends saved profile', async () => {
     const savedProfile = { id: 'p1', name: 'Home', data: { version: 1 } };
     createProfile.mockResolvedValue(savedProfile);

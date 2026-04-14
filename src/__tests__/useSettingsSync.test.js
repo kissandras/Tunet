@@ -190,6 +190,58 @@ describe('useSettingsSync', () => {
     expect(saveCurrentSettings).not.toHaveBeenCalled();
   });
 
+  it('suspends background polling after a 503 current-settings failure', async () => {
+    vi.useFakeTimers();
+    const unavailableError = new Error('Service unavailable');
+    unavailableError.status = 503;
+    fetchCurrentSettings.mockRejectedValue(unavailableError);
+
+    const { result } = renderHook(() =>
+      useSettingsSync({ haUserId: 'user-1', contextSettersRef: { current: {} } })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.backgroundSyncSuspended).toBe(true);
+
+    const callCountAfterBootstrap = fetchCurrentSettings.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12000);
+    });
+
+    expect(fetchCurrentSettings.mock.calls.length).toBe(callCountAfterBootstrap);
+    expect(fetchCurrentDevices).not.toHaveBeenCalled();
+    expect(fetchSettingsHistory).not.toHaveBeenCalled();
+  });
+
+  it('still allows manual sync after background polling is suspended', async () => {
+    const unavailableError = new Error('Service unavailable');
+    unavailableError.status = 503;
+    fetchCurrentSettings.mockRejectedValue(unavailableError);
+
+    const { result } = renderHook(() =>
+      useSettingsSync({ haUserId: 'user-1', contextSettersRef: { current: {} } })
+    );
+
+    await waitFor(() => {
+      expect(result.current.backgroundSyncSuspended).toBe(true);
+    });
+
+    await act(async () => {
+      result.current.syncNow();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    });
+
+    await waitFor(() => {
+      expect(saveCurrentSettings).toHaveBeenCalled();
+    });
+  });
+
   it('syncNow pushes snapshot to server', async () => {
     const { result } = renderHook(() =>
       useSettingsSync({ haUserId: 'user-1', contextSettersRef: { current: {} } })

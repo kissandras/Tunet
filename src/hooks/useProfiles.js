@@ -98,7 +98,7 @@ function normalizeImportedSnapshot(snapshotCandidate) {
  * @param {object|null} options.haUser          — HA user from HomeAssistantContext
  * @param {object}      options.contextSetters  — combined setters from PageContext + ConfigContext
  */
-export function useProfiles({ haUser, contextSetters }) {
+export function useProfiles({ haUser, contextSetters, prefetchProfiles = true }) {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -122,8 +122,9 @@ export function useProfiles({ haUser, contextSetters }) {
   }, [haUser?.id]);
 
   useEffect(() => {
+    if (!prefetchProfiles) return;
     refreshProfiles();
-  }, [refreshProfiles]);
+  }, [refreshProfiles, prefetchProfiles]);
 
   // ── Save current dashboard as a new profile ──
   const saveProfile = useCallback(

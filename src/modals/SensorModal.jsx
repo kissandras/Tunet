@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { X, Activity } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Activity, List } from 'lucide-react';
 import { logger } from '../utils/logger';
-import { getHistory, getHistoryRest, getStatistics } from '../services/haClient';
+import { canUseHistoryRest, getHistory, getHistoryRest, getStatistics } from '../services/haClient';
 import SensorHistoryGraph from '../components/charts/SensorHistoryGraph';
 import BinaryTimeline from '../components/charts/BinaryTimeline';
 import { formatRelativeTime } from '../utils';
 import { getIconComponent } from '../icons';
 import { useConfig, useHomeAssistantMeta } from '../contexts';
 import AccessibleModalShell from '../components/ui/AccessibleModalShell';
+import ModernDropdown from '../components/ui/ModernDropdown';
 import {
   convertValueByKind,
   formatUnitValue,
@@ -15,6 +16,39 @@ import {
   getEffectiveUnitMode,
   inferUnitKind,
 } from '../utils';
+
+function isEntityNumeric(domain, entityId, state) {
+  return (
+    !['script', 'scene'].includes(domain) &&
+    !Number.isNaN(parseFloat(state)) &&
+    !String(state).match(/^unavailable|unknown$/) &&
+    !String(entityId || '').startsWith('binary_sensor.')
+  );
+}
+
+function shouldShowEntityActivity(domain, state, numericState) {
+  const activityDomains = [
+    'binary_sensor',
+    'automation',
+    'switch',
+    'input_boolean',
+    'cover',
+    'light',
+    'fan',
+    'lock',
+    'climate',
+    'media_player',
+    'scene',
+    'script',
+    'select',
+    'input_select',
+  ];
+
+  if (!activityDomains.includes(domain)) return false;
+  if (state === 'unavailable' || state === 'unknown') return false;
+  if (numericState && domain !== 'light' && domain !== 'climate') return false;
+  return true;
+}
 
 export default function SensorModal({
   isOpen,
@@ -25,6 +59,7 @@ export default function SensorModal({
   conn,
   haUrl,
   haToken,
+  callService,
   t = (key) => key,
 }) {
   const { unitsMode } = useConfig();
@@ -66,71 +101,57 @@ export default function SensorModal({
   const attrs = entity?.attributes || {};
   const state = entity?.state;
   const domain = entityId?.split('.')?.[0];
-  const isNumeric =
-    !['script', 'scene'].includes(domain) &&
-    !isNaN(parseFloat(state)) &&
-    !String(state).match(/^unavailable|unknown$/) &&
-    !String(entityId || '').startsWith('binary_sensor.');
-
-  // Helper to determine if entity should show activity (called early before useEffect)
-  const getShouldShowActivity = useCallback(() => {
-    const activityDomains = [
-      'binary_sensor',
-      'automation',
-      'switch',
-      'input_boolean',
-      'cover',
-      'light',
-      'fan',
-      'lock',
-      'climate',
-      'media_player',
-      'scene',
-      'script',
-      'input_select',
-    ];
-
-    if (!activityDomains.includes(domain)) return false;
-    if (state === 'unavailable' || state === 'unknown') return false;
-    if (isNumeric && domain !== 'light' && domain !== 'climate') return false;
-    return true;
-  }, [domain, state, isNumeric]);
+  const isNumeric = isEntityNumeric(domain, entityId, state);
+  const entityRef = useRef(entity);
+  entityRef.current = entity;
 
   useEffect(() => {
-    if (isOpen && entity && conn) {
+    let cancelled = false;
+
+    if (isOpen && entityId && conn) {
       const fetchHistory = async () => {
         setLoading(true);
         setHistoryError(null);
         setHistoryMeta({ source: null, rawCount: 0 });
         try {
+          const activeEntity = entityRef.current;
+          if (!activeEntity?.entity_id) {
+            if (!cancelled) {
+              setHistory([]);
+              setHistoryEvents([]);
+            }
+            return;
+          }
+
           const end = new Date();
           const start = new Date(end.getTime() - historyHours * 60 * 60 * 1000);
-          setTimeWindow({ start, end });
+          if (!cancelled) setTimeWindow({ start, end });
 
           let points = [];
           let events = [];
+          const currentDomain = activeEntity.entity_id?.split('.')?.[0];
+          const currentState = activeEntity.state;
+          const numericHistory = isEntityNumeric(currentDomain, activeEntity.entity_id, currentState);
 
           // Determine if we need history data for activity/events display
-          const needsActivityData = getShouldShowActivity();
-
-          // Try fetching history via REST first (recommended for full data)
-          try {
-            // Always fetch history for numeric or activity-requiring entities
-            const shouldFetch = needsActivityData || isNumeric;
-
-            if (shouldFetch) {
-              const data = await getHistoryRest(haUrl, haToken, {
-                entityId: entity.entity_id,
+          const needsActivityData = shouldShowEntityActivity(
+            currentDomain,
+            currentState,
+            numericHistory
+          );
+          const shouldFetch = needsActivityData || numericHistory;
+          const loadWsHistory = async (errorMessage = null) => {
+            try {
+              const wsData = await getHistory(conn, {
+                entityId: activeEntity.entity_id,
                 start,
                 end,
                 minimal_response: false,
                 no_attributes: false,
-                significant_changes_only: false,
               });
-
-              if (data && Array.isArray(data)) {
-                const raw = Array.isArray(data[0]) ? data[0] : data;
-                setHistoryMeta({ source: 'rest', rawCount: raw.length });
+              if (wsData && Array.isArray(wsData)) {
+                const raw = Array.isArray(wsData[0]) ? wsData[0] : wsData;
+                if (!cancelled) setHistoryMeta({ source: 'ws', rawCount: raw.length });
                 points = raw
                   .filter((d) => !isNaN(parseFloat(d?.state)))
                   .map((d) => ({
@@ -166,24 +187,33 @@ export default function SensorModal({
                     };
                   })
                   .filter(Boolean);
+                if (!cancelled) setHistoryError(null);
+              } else if (errorMessage && !cancelled) {
+                setHistoryError(errorMessage);
               }
+            } catch (_wsErr) {
+              if (errorMessage && !cancelled) setHistoryError(errorMessage);
             }
-          } catch (err) {
-            const restMessage = err?.message || 'History REST failed';
-            // Continue to WS fallback
-            try {
-              const shouldFetch = needsActivityData || isNumeric;
-              if (shouldFetch) {
-                const wsData = await getHistory(conn, {
-                  entityId: entity.entity_id,
+          };
+
+          // Try fetching history via REST first (recommended for full data)
+          if (shouldFetch) {
+            const canUseRest = canUseHistoryRest(haUrl);
+
+            if (canUseRest) {
+              try {
+                const data = await getHistoryRest(haUrl, haToken, {
+                  entityId: activeEntity.entity_id,
                   start,
                   end,
                   minimal_response: false,
                   no_attributes: false,
+                  significant_changes_only: false,
                 });
-                if (wsData && Array.isArray(wsData)) {
-                  const raw = Array.isArray(wsData[0]) ? wsData[0] : wsData;
-                  setHistoryMeta({ source: 'ws', rawCount: raw.length });
+
+                if (data && Array.isArray(data)) {
+                  const raw = Array.isArray(data[0]) ? data[0] : data;
+                  if (!cancelled) setHistoryMeta({ source: 'rest', rawCount: raw.length });
                   points = raw
                     .filter((d) => !isNaN(parseFloat(d?.state)))
                     .map((d) => ({
@@ -219,21 +249,28 @@ export default function SensorModal({
                       };
                     })
                     .filter(Boolean);
-                  setHistoryError(null);
-                } else {
-                  setHistoryError(restMessage);
                 }
+              } catch (err) {
+                await loadWsHistory(err?.message || 'History REST failed');
               }
-            } catch (_wsErr) {
-              setHistoryError(restMessage);
+            } else {
+              await loadWsHistory();
             }
+          }
+
+          if (!shouldFetch) {
+            if (!cancelled) {
+              setHistory([]);
+              setHistoryEvents([]);
+            }
+            return;
           }
 
           // Fallback to statistics if history is sparse or empty
           if (points.length < 2) {
             try {
               const stats = await getStatistics(conn, {
-                statisticId: entity.entity_id,
+                statisticId: activeEntity.entity_id,
                 start,
                 end,
                 period: 'hour',
@@ -258,9 +295,9 @@ export default function SensorModal({
           }
 
           // Final fallback for current state as line
-          if (points.length < 2 && !isNaN(parseFloat(entity.state))) {
+          if (points.length < 2 && !isNaN(parseFloat(currentState))) {
             const now = new Date();
-            const val = parseFloat(entity.state);
+            const val = parseFloat(currentState);
             points = [
               { value: val, time: new Date(now.getTime() - historyHours * 60 * 60 * 1000) },
               { value: val, time: now },
@@ -269,21 +306,23 @@ export default function SensorModal({
 
           // Fallback for events (Binary Timeline) if no history found
           // Even if unavailable, we want to show that state
-          if (events.length === 0 && entity.state) {
+          if (events.length === 0 && currentState) {
             events = [
               {
-                state: entity.state,
+                state: currentState,
                 time: start,
                 lastChanged: start.toISOString(),
               },
             ];
           }
-          setHistory(points);
-          setHistoryEvents(events);
+          if (!cancelled) {
+            setHistory(points);
+            setHistoryEvents(events);
+          }
         } catch (_e) {
           console.error('Failed to load history', _e);
         } finally {
-          setLoading(false);
+          if (!cancelled) setLoading(false);
         }
       };
 
@@ -292,7 +331,11 @@ export default function SensorModal({
       setHistory([]);
       setHistoryEvents([]);
     }
-  }, [isOpen, entity, conn, haUrl, haToken, historyHours, getShouldShowActivity, isNumeric]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, entityId, conn, haUrl, haToken, historyHours]);
 
   if (!isOpen || !entity) return null;
 
@@ -302,9 +345,7 @@ export default function SensorModal({
   const effectiveUnitMode = getEffectiveUnitMode(unitsMode, haConfig);
   const inferredUnitKind = inferUnitKind(deviceClass, unit);
   // Determine if entity should show activity timeline and log
-  const shouldShowActivity = () => getShouldShowActivity();
-
-  const hasActivity = shouldShowActivity();
+  const hasActivity = shouldShowEntityActivity(domain, state, isNumeric);
 
   const lastChanged = entity.last_changed ? new Date(entity.last_changed).toLocaleString() : '--';
   const lastUpdated = entity.last_updated ? new Date(entity.last_updated).toLocaleString() : '--';
@@ -475,6 +516,25 @@ export default function SensorModal({
               </div>
             </div>
           </div>
+
+          {/* Select option control */}
+          {(domain === 'select' || domain === 'input_select') && callService && (
+            <div className="mb-6 shrink-0">
+              <ModernDropdown
+                label={t('sensor.select.label') || 'Select'}
+                icon={List}
+                options={attrs.options || []}
+                current={state || ''}
+                onChange={(option) => {
+                  callService(domain, 'select_option', {
+                    entity_id: entityId,
+                    option,
+                  });
+                }}
+                placeholder={t('sensor.select.label') || 'Select'}
+              />
+            </div>
+          )}
 
           {/* Main Content Area */}
           <div className="relative flex min-h-0 flex-1 flex-col">
