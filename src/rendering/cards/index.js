@@ -3,6 +3,7 @@ export { renderLightCard } from './lightRenderer';
 export { renderAutomationCard } from './automationRenderer';
 export { renderCarCard } from './carRenderer';
 export { renderVacuumCard } from './vacuumRenderer';
+export { renderMowerCard } from './mowerRenderer';
 export { renderFanCard } from './fanRenderer';
 export { renderMediaPlayerCard } from './mediaPlayerRenderer';
 export { renderMediaGroupCard } from './mediaGroupRenderer';

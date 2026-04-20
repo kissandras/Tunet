@@ -6,6 +6,7 @@ const rendererMocks = vi.hoisted(() => ({
   renderAutomationCard: vi.fn(() => ({ renderer: 'automation' })),
   renderCarCard: vi.fn(() => ({ renderer: 'car' })),
   renderVacuumCard: vi.fn(() => ({ renderer: 'vacuum' })),
+  renderMowerCard: vi.fn(() => ({ renderer: 'mower' })),
   renderFanCard: vi.fn(() => ({ renderer: 'fan' })),
   renderMediaPlayerCard: vi.fn(() => ({ renderer: 'media_player' })),
   renderMediaGroupCard: vi.fn(() => ({ renderer: 'media_group' })),

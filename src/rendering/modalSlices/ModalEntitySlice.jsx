@@ -20,6 +20,7 @@ const SensorModal = lazy(() => import('../../modals/SensorModal'));
 const TodoModal = lazy(() => import('../../modals/TodoModal'));
 const RoomModal = lazy(() => import('../../modals/RoomModal'));
 const VacuumModal = lazy(() => import('../../modals/VacuumModal'));
+const MowerModal = lazy(() => import('../../modals/MowerModal'));
 
 export function ModalEntitySlice({ core, modals, cardConfig, entityHelpers, resolveCarSettings }) {
   const { entities, conn, activeUrl, authRef, config, t, language } = core;
@@ -40,6 +41,8 @@ export function ModalEntitySlice({ core, modals, cardConfig, entityHelpers, reso
     setShowAndroidTVModal,
     showVacuumModal,
     setShowVacuumModal,
+    showMowerModal,
+    setShowMowerModal,
     showFanModal,
     setShowFanModal,
     showSensorInfoModal,
@@ -62,6 +65,8 @@ export function ModalEntitySlice({ core, modals, cardConfig, entityHelpers, reso
     setShowWeatherModal,
     activeVacuumId,
     setActiveVacuumId,
+    activeMowerId,
+    setActiveMowerId,
   } = modals;
   const { cardSettings, saveCardSetting, customNames, customIcons, getCardSettingsKey } =
     cardConfig;
@@ -210,6 +215,23 @@ export function ModalEntitySlice({ core, modals, cardConfig, entityHelpers, reso
               />
             );
           })()}
+        </ModalSuspense>
+      )}
+
+      {showMowerModal && activeMowerId && entities[activeMowerId] && (
+        <ModalSuspense>
+          <MowerModal
+            show={showMowerModal}
+            onClose={() => {
+              setShowMowerModal(false);
+              setActiveMowerId(null);
+            }}
+            entities={entities}
+            callService={callService}
+            getA={getA}
+            t={t}
+            mowerId={activeMowerId}
+          />
         </ModalSuspense>
       )}
 

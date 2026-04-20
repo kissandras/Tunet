@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.16.0
+
+### Added
+- Includes dashboard release `1.16.0`.
+- Adds support for mower cards and mower popup controls for `lawn_mower.*` entities.
+
+### Changed
+- Improves Media/Sonos page presentation with empty-state messaging, stronger action labels, and more resilient grouping behavior.
+
+### Fixed
+- Improves backend Home Assistant URL fallback handling for Docker-hosted setups, reducing profile/settings backend unavailable errors.
+
 ## 1.15.4
 
 ### Changed

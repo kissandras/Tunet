@@ -113,3 +113,77 @@ describe('MediaPage Sonos discovery', () => {
     expect(screen.getAllByText('Living Room').length).toBeGreaterThan(0);
   });
 });
+
+describe('MediaPage Sonos empty state', () => {
+  it('renders the empty state when no Sonos players are present', () => {
+    render(<MediaPage {...makeBaseProps({ entities: {} })} />);
+    expect(screen.getByText('sonos.empty.title')).toBeInTheDocument();
+    expect(screen.getByText('sonos.empty.subtitle')).toBeInTheDocument();
+  });
+});
+
+describe('MediaPage Sonos grouping', () => {
+  const groupingEntities = {
+    'media_player.kitchen': {
+      entity_id: 'media_player.kitchen',
+      state: 'playing',
+      attributes: {
+        friendly_name: 'Kitchen',
+        integration: 'sonos',
+        group_members: ['media_player.kitchen'],
+        supported_features: 0,
+      },
+    },
+    'media_player.bedroom': {
+      entity_id: 'media_player.bedroom',
+      state: 'idle',
+      attributes: {
+        friendly_name: 'Bedroom',
+        integration: 'sonos',
+        group_members: ['media_player.bedroom'],
+        supported_features: 0,
+      },
+    },
+  };
+
+  it('joins all other players when "Group" is clicked and no group exists yet', () => {
+    const callService = vi.fn();
+    render(
+      <MediaPage
+        {...makeBaseProps({
+          entities: groupingEntities,
+          activeMediaId: 'media_player.kitchen',
+          callService,
+          conn: { sendMessagePromise: vi.fn() },
+        })}
+      />
+    );
+
+    const groupBtn = screen.getByLabelText('sonos.groupAll');
+    fireEvent.click(groupBtn);
+
+    expect(callService).toHaveBeenCalledWith('media_player', 'join', {
+      entity_id: 'media_player.kitchen',
+      group_members: ['media_player.bedroom'],
+    });
+  });
+
+  it('does not call join when there is no active connection', () => {
+    const callService = vi.fn();
+    render(
+      <MediaPage
+        {...makeBaseProps({
+          entities: groupingEntities,
+          activeMediaId: 'media_player.kitchen',
+          callService,
+          conn: null,
+        })}
+      />
+    );
+
+    const groupBtn = screen.getByLabelText('sonos.groupAll');
+    fireEvent.click(groupBtn);
+
+    expect(callService).not.toHaveBeenCalled();
+  });
+});

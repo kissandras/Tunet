@@ -27,3 +27,30 @@ playwright-report/
 CODE_REVIEW_*.md
 # Local SQLite database
 data/
+
+# --- Local AI tooling (Copilot extras, Claude, Cursor, Aider, Windsurf, Gemini, etc.) ---
+# Personal/local AI assistant configs — keep out of git.
+# The canonical project guidance lives in .github/copilot-instructions.md (committed).
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.aider.conf.yml
+.aider*
+.cursor/
+.cursorrules
+.cursorignore
+.windsurf/
+.windsurfrules
+.continue/
+.codeium/
+.zed/
+.junie/
+.roo/
+.clinerules
+.opencommit
+# Local-only Copilot extras (the tracked instructions file stays committed)
+.github/prompts/
+.github/chatmodes/
+.github/instructions/
+.github/copilot/
+AI_TOOLING.md

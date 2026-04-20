@@ -125,6 +125,7 @@ vi.mock('../contexts', () => ({
     setShowPersonModal: vi.fn(),
     setShowAndroidTVModal: vi.fn(),
     setShowVacuumModal: vi.fn(),
+    setShowMowerModal: vi.fn(),
     setShowFanModal: vi.fn(),
     setShowSensorInfoModal: vi.fn(),
     setShowCalendarModal: vi.fn(),
@@ -157,6 +158,8 @@ vi.mock('../contexts', () => ({
   useAppUiStateContext: () => ({
     activeVacuumId: null,
     setActiveVacuumId: vi.fn(),
+    activeMowerId: null,
+    setActiveMowerId: vi.fn(),
     showThemeSidebar: false,
     setShowThemeSidebar: vi.fn(),
     showLayoutSidebar: false,

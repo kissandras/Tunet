@@ -14,6 +14,7 @@ const REMOVABLE_PREFIXES = [
   'light_',
   'light.',
   'vacuum.',
+  'lawn_mower.',
   'media_player.',
   'media_group_',
   'sonos_group_',

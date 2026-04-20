@@ -5,6 +5,7 @@ const AppUiContext = createContext(null);
 /** @param {{ children: import('react').ReactNode }} props */
 export function AppUiProvider({ children }) {
   const [activeVacuumId, setActiveVacuumId] = useState(null);
+  const [activeMowerId, setActiveMowerId] = useState(null);
   const [showThemeSidebar, setShowThemeSidebar] = useState(false);
   const [showLayoutSidebar, setShowLayoutSidebar] = useState(false);
   const [editCardSettingsKey, setEditCardSettingsKey] = useState(null);
@@ -14,6 +15,8 @@ export function AppUiProvider({ children }) {
     () => ({
       activeVacuumId,
       setActiveVacuumId,
+      activeMowerId,
+      setActiveMowerId,
       showThemeSidebar,
       setShowThemeSidebar,
       showLayoutSidebar,
@@ -23,7 +26,7 @@ export function AppUiProvider({ children }) {
       editMode,
       setEditMode,
     }),
-    [activeVacuumId, showThemeSidebar, showLayoutSidebar, editCardSettingsKey, editMode]
+    [activeVacuumId, activeMowerId, showThemeSidebar, showLayoutSidebar, editCardSettingsKey, editMode]
   );
 
   return <AppUiContext.Provider value={value}>{children}</AppUiContext.Provider>;

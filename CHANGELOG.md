@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.16.0] — 2026-04-20
+
+### Added
+- Added a new `lawn_mower` card type with small and large layouts, plus start/pause/dock controls.
+- Added a dedicated mower popup with status, battery, zone, and quick actions.
+- Added French language support (`fr`) to the dashboard locale bundle.
+
+### Changed
+- Expanded card/add-flow and rendering registry support for mower entities across card creation, popups, and orchestration wiring.
+- Improved Media/Sonos page UX with clearer empty states, better styling, and stronger action/accessibility labels.
+
+### Fixed
+- Restored profile/settings availability in more Docker environments by adding `host.containers.internal` as a backend Home Assistant fallback when localhost mapping is used.
+- Enabled small/large resize controls for mower cards in edit mode.
+
+
 ## [1.15.4] — 2026-04-14
 
 ### Added

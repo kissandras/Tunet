@@ -65,6 +65,7 @@ const DOMAIN_PREFIXES = [
   'cover',
   'climate',
   'vacuum',
+  'lawn_mower',
   'media_player',
   'camera',
   'person',

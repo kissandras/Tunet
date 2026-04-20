@@ -26,6 +26,7 @@ export function useDashboardStateCoordinator(deps) {
     editMode,
     setEditMode,
     setActiveVacuumId,
+    setActiveMowerId,
     setEditCardSettingsKey,
     entityModalActions,
     mediaModalActions,
@@ -42,6 +43,7 @@ export function useDashboardStateCoordinator(deps) {
     setActiveClimateEntityModal: deps.setActiveClimateEntityModal,
     setShowCostModal: deps.setShowCostModal,
     setShowVacuumModal: deps.setShowVacuumModal,
+    setShowMowerModal: deps.setShowMowerModal,
     setShowFanModal: deps.setShowFanModal,
     setShowAndroidTVModal: deps.setShowAndroidTVModal,
     setActiveCarModal: deps.setActiveCarModal,
@@ -71,6 +73,7 @@ export function useDashboardStateCoordinator(deps) {
     setActiveClimateEntityModal,
     setShowCostModal,
     setShowVacuumModal,
+    setShowMowerModal,
     setShowFanModal,
     setShowAndroidTVModal,
     setActiveCarModal,
@@ -99,6 +102,8 @@ export function useDashboardStateCoordinator(deps) {
       setShowCostModal,
       setActiveVacuumId,
       setShowVacuumModal,
+      setActiveMowerId,
+      setShowMowerModal,
       setShowFanModal,
       setShowAndroidTVModal,
       setActiveCarModal,
@@ -124,6 +129,8 @@ export function useDashboardStateCoordinator(deps) {
       setShowCostModal,
       setActiveVacuumId,
       setShowVacuumModal,
+      setActiveMowerId,
+      setShowMowerModal,
       setShowFanModal,
       setShowAndroidTVModal,
       setActiveCarModal,
@@ -155,6 +162,7 @@ export function useDashboardStateCoordinator(deps) {
       setActivePage('home');
       closeAllModals();
       setActiveVacuumId(null);
+      setActiveMowerId?.(null);
       setEditCardSettingsKey(null);
       setEditingPage(null);
       setEditMode(false);

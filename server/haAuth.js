@@ -17,6 +17,7 @@ const DEFAULT_INVALID_AUTH_CACHE_TTL_MS = Math.min(
 const MAX_CACHE_ENTRIES = 200;
 const TRUSTED_INGRESS_IPS = new Set(['172.30.32.2', '127.0.0.1', '::1']);
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const DOCKER_LOOPBACK_CANDIDATE_HOSTS = ['host.docker.internal', 'host.containers.internal'];
 const NETWORK_ERROR_PATTERNS = [
   'econnrefused',
   'econnreset',
@@ -105,20 +106,23 @@ const normalizeHomeAssistantUrl = (rawUrl) => {
   }
 };
 
-const buildDockerReachableUrlCandidate = (rawUrl) => {
+const buildDockerReachableUrlCandidates = (rawUrl) => {
   const normalized = normalizeHomeAssistantUrl(rawUrl);
-  if (!normalized) return null;
+  if (!normalized) return [];
 
   try {
     const parsed = new URL(normalized);
     if (!LOOPBACK_HOSTS.has(parsed.hostname)) {
-      return null;
+      return [];
     }
 
-    parsed.hostname = 'host.docker.internal';
-    return parsed.toString().replace(/\/$/, '');
+    return DOCKER_LOOPBACK_CANDIDATE_HOSTS.map((hostname) => {
+      const candidate = new URL(normalized);
+      candidate.hostname = hostname;
+      return candidate.toString().replace(/\/$/, '');
+    });
   } catch {
-    return null;
+    return [];
   }
 };
 
@@ -142,7 +146,10 @@ const getHomeAssistantUrlCandidates = (req) => {
 
   requestCandidates.forEach((candidate) => {
     pushUniqueCandidate(candidates, candidate);
-    pushUniqueCandidate(candidates, buildDockerReachableUrlCandidate(candidate));
+    const dockerCandidates = buildDockerReachableUrlCandidates(candidate);
+    dockerCandidates.forEach((dockerCandidate) => {
+      pushUniqueCandidate(candidates, dockerCandidate);
+    });
   });
 
   return candidates;

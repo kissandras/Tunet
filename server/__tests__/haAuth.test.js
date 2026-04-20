@@ -292,11 +292,45 @@ describe('createHomeAssistantAuthMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 
+  it('falls back to host.containers.internal when host.docker.internal is not reachable', async () => {
+    const validateHomeAssistantUser = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:8123'))
+      .mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND host.docker.internal'))
+      .mockResolvedValueOnce({ id: 'user-999' });
+    const middleware = createHomeAssistantAuthMiddleware({ validateHomeAssistantUser });
+    const req = createRequest({
+      authorization: 'Bearer token-1',
+      'x-ha-url': 'http://localhost:8123',
+    });
+    const res = createResponse();
+    const next = vi.fn();
+
+    await middleware(req, res, next);
+
+    expect(validateHomeAssistantUser).toHaveBeenNthCalledWith(1, {
+      haUrl: 'http://localhost:8123',
+      accessToken: 'token-1',
+    });
+    expect(validateHomeAssistantUser).toHaveBeenNthCalledWith(2, {
+      haUrl: 'http://host.docker.internal:8123',
+      accessToken: 'token-1',
+    });
+    expect(validateHomeAssistantUser).toHaveBeenNthCalledWith(3, {
+      haUrl: 'http://host.containers.internal:8123',
+      accessToken: 'token-1',
+    });
+    expect(req.authenticatedHaUser).toEqual({ id: 'user-999' });
+    expect(req.authenticatedHaUrl).toBe('http://host.containers.internal:8123');
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
   it('prioritises auth errors over reachability errors when multiple URLs are tried', async () => {
     const validateHomeAssistantUser = vi
       .fn()
       .mockRejectedValueOnce(new Error('Invalid auth'))
-      .mockRejectedValueOnce(new Error('connect ECONNREFUSED 192.168.1.20:8123'));
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED host.docker.internal:8123'))
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED host.containers.internal:8123'));
     const middleware = createHomeAssistantAuthMiddleware({ validateHomeAssistantUser });
     const req = createRequest({
       authorization: 'Bearer token-1',

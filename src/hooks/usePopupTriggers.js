@@ -40,6 +40,8 @@ function openPopupForCard(cardId, settings, modalActions, entities) {
     setShowCostModal,
     setActiveVacuumId,
     setShowVacuumModal,
+    setActiveMowerId,
+    setShowMowerModal,
     setShowFanModal,
     setShowAndroidTVModal,
     setActiveCarModal,
@@ -83,6 +85,14 @@ function openPopupForCard(cardId, settings, modalActions, entities) {
     closeAndOpen(() => {
       setActiveVacuumId(cardId);
       setShowVacuumModal(true);
+    });
+    return true;
+  }
+
+  if (cardId.startsWith('lawn_mower.')) {
+    closeAndOpen(() => {
+      setActiveMowerId?.(cardId);
+      setShowMowerModal?.(true);
     });
     return true;
   }

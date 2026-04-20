@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import M3Slider from '../ui/M3Slider';
 import {
   Music,
@@ -61,7 +61,7 @@ const BLOCKED_TITLE_WORDS = [
   'cctv',
 ];
 
-export default function MediaPage({
+function MediaPage({
   pageId,
   entities,
   conn,
@@ -91,25 +91,42 @@ export default function MediaPage({
   const [failedImageMap, setFailedImageMap] = useState({});
   const isSonosMode = mode === 'sonos';
   const pageSetting = pageSettings[pageId] || {};
-  const allMediaIds = Object.keys(entities)
-    .filter((id) => id.startsWith('media_player.'))
-    .filter((id) => {
-      const entity = entities[id];
-      const sonos = isSonosMediaEntity(entity);
-      return isSonosMode ? sonos : !sonos;
-    });
+  const allMediaIds = useMemo(
+    () =>
+      Object.keys(entities)
+        .filter((id) => id.startsWith('media_player.'))
+        .filter((id) => {
+          const entity = entities[id];
+          const sonos = isSonosMediaEntity(entity);
+          return isSonosMode ? sonos : !sonos;
+        }),
+    [entities, isSonosMode]
+  );
   const showAll = !Array.isArray(pageSetting.mediaIds);
   const selectedIds = showAll ? allMediaIds : pageSetting.mediaIds;
-  const visibleIds = selectedIds.length > 0 ? selectedIds : [];
-  const mediaEntities = visibleIds.map((id) => entities[id]).filter(Boolean);
+  const visibleIds = useMemo(
+    () => (selectedIds.length > 0 ? selectedIds : []),
+    [selectedIds]
+  );
+  const mediaEntities = useMemo(
+    () => visibleIds.map((id) => entities[id]).filter(Boolean),
+    [visibleIds, entities]
+  );
 
-  const sonosEntities = mediaEntities.filter(isSonosMediaEntity);
-  const filteredMediaIds = allMediaIds.filter((id) => {
-    if (!mediaSearch) return true;
-    const lower = mediaSearch.toLowerCase();
-    const name = entities[id]?.attributes?.friendly_name || id;
-    return id.toLowerCase().includes(lower) || name.toLowerCase().includes(lower);
-  });
+  const sonosEntities = useMemo(
+    () => mediaEntities.filter(isSonosMediaEntity),
+    [mediaEntities]
+  );
+  const filteredMediaIds = useMemo(
+    () =>
+      allMediaIds.filter((id) => {
+        if (!mediaSearch) return true;
+        const lower = mediaSearch.toLowerCase();
+        const name = entities[id]?.attributes?.friendly_name || id;
+        return id.toLowerCase().includes(lower) || name.toLowerCase().includes(lower);
+      }),
+    [allMediaIds, mediaSearch, entities]
+  );
 
   const activeSonos = sonosEntities.filter(isSonosActive);
   let currentMp =
@@ -341,12 +358,19 @@ export default function MediaPage({
         ? favoritesLoading || browseLoading
         : browseLoading;
 
-  const sonosAllIds = allMediaIds.filter((id) => isSonosMediaEntity(entities[id]));
-  const manageablePlayerIds = (isSonosMode ? sonosAllIds : []).slice().sort((a, b) => {
-    const aName = entities[a]?.attributes?.friendly_name || a;
-    const bName = entities[b]?.attributes?.friendly_name || b;
-    return aName.localeCompare(bName);
-  });
+  const sonosAllIds = useMemo(
+    () => allMediaIds.filter((id) => isSonosMediaEntity(entities[id])),
+    [allMediaIds, entities]
+  );
+  const manageablePlayerIds = useMemo(
+    () =>
+      (isSonosMode ? sonosAllIds : []).slice().sort((a, b) => {
+        const aName = entities[a]?.attributes?.friendly_name || a;
+        const bName = entities[b]?.attributes?.friendly_name || b;
+        return aName.localeCompare(bName);
+      }),
+    [isSonosMode, sonosAllIds, entities]
+  );
 
   useEffect(() => {
     if (!isSonosMode && rightPanelView === 'manage') {
@@ -589,15 +613,22 @@ export default function MediaPage({
     t,
   ]);
 
-  const listPlayers = mediaEntities.slice().sort((a, b) => {
-    const aActive = isSonosMediaEntity(a) ? isSonosActive(a) : a?.state === 'playing';
-    const bActive = isSonosMediaEntity(b) ? isSonosActive(b) : b?.state === 'playing';
-    if (aActive !== bActive) return aActive ? -1 : 1;
-    return (a.attributes?.friendly_name || '').localeCompare(b.attributes?.friendly_name || '');
-  });
+  const listPlayers = useMemo(
+    () =>
+      mediaEntities.slice().sort((a, b) => {
+        const aActive = isSonosMediaEntity(a) ? isSonosActive(a) : a?.state === 'playing';
+        const bActive = isSonosMediaEntity(b) ? isSonosActive(b) : b?.state === 'playing';
+        if (aActive !== bActive) return aActive ? -1 : 1;
+        return (a.attributes?.friendly_name || '').localeCompare(
+          b.attributes?.friendly_name || ''
+        );
+      }),
+    [mediaEntities, isSonosActive]
+  );
 
-  const toggleGroupAll = () => {
+  const toggleGroupAll = useCallback(() => {
     if (!isSonosMode) return;
+    if (!conn) return;
     const allIds = listPlayers.map((player) => player.entity_id);
     const otherIds = allIds.filter((id) => id !== mpId);
     if (hasGroupedOthers) {
@@ -607,7 +638,7 @@ export default function MediaPage({
     if (otherIds.length > 0) {
       callService('media_player', 'join', { entity_id: mpId, group_members: otherIds });
     }
-  };
+  }, [isSonosMode, conn, listPlayers, mpId, hasGroupedOthers, groupedOthers, callService]);
 
   const playChoice = (choice, fallbackType = 'music') => {
     if (!choice?.id || !mpId) return;
@@ -780,16 +811,64 @@ export default function MediaPage({
         </div>
       )}
 
+      {mediaEntities.length === 0 && (
+        <div
+          className="popup-surface flex w-full flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--glass-border)] p-10 text-center"
+          role="status"
+          aria-live="polite"
+        >
+          <Speaker className="h-10 w-10 text-[var(--text-muted)]" aria-hidden="true" />
+          <p className="text-sm font-bold tracking-widest text-[var(--text-primary)] uppercase">
+            {isSonosMode
+              ? t('sonos.empty.title') || 'No Sonos players found'
+              : t('media.empty.title') || 'No media players found'}
+          </p>
+          <p className="max-w-md text-xs text-[var(--text-secondary)]">
+            {isSonosMode
+              ? t('sonos.empty.subtitle') ||
+                'Connect a Sonos integration in Home Assistant to see your speakers here.'
+              : t('media.empty.subtitle') ||
+                'Add a media_player entity in Home Assistant to see it here.'}
+          </p>
+        </div>
+      )}
+
       {mediaEntities.length > 0 && (
         <div className="grid w-full grid-cols-1 items-stretch gap-8 lg:grid-cols-[1.35fr_0.85fr]">
-          <div className="popup-surface flex min-h-[480px] w-full min-w-0 flex-col rounded-3xl border border-[var(--glass-border)] p-8">
+          <div
+            className={`popup-surface relative flex min-h-[480px] w-full min-w-0 flex-col overflow-hidden rounded-3xl border p-8 ${
+              isSonosMode
+                ? 'border-[var(--status-info-fg)]/35 shadow-[0_0_0_1px_rgba(125,211,252,0.08),0_20px_60px_rgba(59,130,246,0.15)]'
+                : 'border-[var(--glass-border)]'
+            }`}
+          >
+            {isSonosMode && (
+              <div
+                className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(circle, color-mix(in oklab, var(--status-info-fg) 40%, transparent) 0%, transparent 70%)',
+                }}
+                aria-hidden="true"
+              />
+            )}
             <div className="mb-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-2">
-                <Music className="h-4 w-4 text-[var(--text-primary)]" />
+                {isSonosMode ? (
+                  <Speaker className="h-4 w-4 text-[var(--text-primary)]" />
+                ) : (
+                  <Music className="h-4 w-4 text-[var(--text-primary)]" />
+                )}
                 <span className="text-xs font-bold tracking-widest text-[var(--text-primary)] uppercase">
                   {isSonosMode ? t('sonos.pageName') : t('addCard.type.media')}
                 </span>
               </div>
+              {isSonosMode && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--status-info-fg)]/35 bg-[var(--status-info-bg)] px-3 py-1 text-[10px] font-bold tracking-widest text-[var(--status-info-fg)] uppercase">
+                  <span>{listPlayers.length}</span>
+                  <span>{t('media.tab.players')}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-1 flex-col items-center gap-8 md:flex-row md:gap-12">
@@ -845,7 +924,7 @@ export default function MediaPage({
                           seek_position: parseFloat(e.target.value),
                         })
                       }
-                      colorClass="bg-white"
+                      colorClass="bg-[var(--text-primary)]"
                     />
                   </div>
 
@@ -866,7 +945,10 @@ export default function MediaPage({
                             }
                           : undefined
                       }
-                      title="Shuffle"
+                      type="button"
+                      aria-pressed={shuffle}
+                      aria-label={t('media.shuffle') || 'Shuffle'}
+                      title={t('media.shuffle') || 'Shuffle'}
                     >
                       <Shuffle className="h-[clamp(0.9rem,2vw,1rem)] w-[clamp(0.9rem,2vw,1rem)]" />
                     </button>
@@ -937,7 +1019,10 @@ export default function MediaPage({
                             }
                           : undefined
                       }
-                      title="Repeat"
+                      type="button"
+                      aria-pressed={repeat !== 'off'}
+                      aria-label={`${t('media.repeat') || 'Repeat'} (${repeat})`}
+                      title={t('media.repeat') || 'Repeat'}
                     >
                       {repeat === 'one' ? (
                         <Repeat1 className="h-[clamp(0.9rem,2vw,1rem)] w-[clamp(0.9rem,2vw,1rem)]" />
@@ -965,6 +1050,10 @@ export default function MediaPage({
                       })
                     }
                     className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-hover)] hover:text-[var(--text-primary)] active:scale-95"
+                    type="button"
+                    aria-pressed={isMuted}
+                    aria-label={isMuted ? t('media.volume.unmute') || 'Unmute' : t('media.volume.mute') || 'Mute'}
+                    title={isMuted ? t('media.volume.unmute') || 'Unmute' : t('media.volume.mute') || 'Mute'}
                   >
                     {isMuted ? (
                       <VolumeX className="h-4 w-4" />
@@ -987,7 +1076,7 @@ export default function MediaPage({
                           volume_level: parseFloat(e.target.value) / 100,
                         })
                       }
-                      colorClass="bg-white"
+                      colorClass="bg-[var(--text-primary)]"
                     />
                   </div>
                   <button
@@ -1004,7 +1093,13 @@ export default function MediaPage({
           </div>
 
           {mediaEntities.length > 0 && (
-            <div className="popup-surface flex max-h-[480px] min-h-[480px] w-full min-w-0 flex-col rounded-3xl border border-[var(--glass-border)] p-6">
+            <div
+              className={`popup-surface flex max-h-[480px] min-h-[480px] w-full min-w-0 flex-col rounded-3xl border p-6 ${
+                isSonosMode
+                  ? 'border-[var(--status-info-fg)]/30 shadow-[0_12px_35px_rgba(59,130,246,0.12)]'
+                  : 'border-[var(--glass-border)]'
+              }`}
+            >
               <div className="mb-4 flex items-center justify-between gap-2">
                 <div className="popup-surface inline-flex items-center gap-1 rounded-xl border border-[var(--glass-border)] p-1">
                   <button
@@ -1054,7 +1149,7 @@ export default function MediaPage({
                           : undefined
                       }
                     >
-                      {t('media.tab.manage')}
+                      {t('sonos.managePlayers') || t('media.tab.manage')}
                     </button>
                   )}
                 </div>
@@ -1120,8 +1215,8 @@ export default function MediaPage({
                                 </div>
                               )}
                               {p.state === 'playing' && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                                <div className="absolute inset-0 flex items-center justify-center bg-[var(--glass-bg-strong,rgba(0,0,0,0.3))]">
+                                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--text-primary)]" />
                                 </div>
                               )}
                             </div>
@@ -1327,15 +1422,15 @@ export default function MediaPage({
                               disabled={isAdded || showAll}
                               className={`rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors ${isAdded || showAll ? 'cursor-not-allowed bg-[var(--glass-bg)] text-[var(--text-muted)] opacity-50' : 'bg-[var(--status-success-bg)] text-[var(--status-success-fg)] hover:opacity-90'}`}
                             >
-                              Add
+                              {t('common.add') || 'Add'}
                             </button>
                             <button
                               type="button"
                               onClick={() => removePlayerSelection(id)}
                               disabled={!isAdded}
-                              className={`rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors ${!isAdded ? 'cursor-not-allowed bg-[var(--glass-bg)] text-[var(--text-muted)] opacity-50' : 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'}`}
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase transition-colors ${!isAdded ? 'cursor-not-allowed bg-[var(--glass-bg)] text-[var(--text-muted)] opacity-50' : 'bg-[var(--status-error-bg)] text-[var(--status-error-fg)] hover:opacity-90'}`}
                             >
-                              {t('media.clearSelection') || 'Remove'}
+                              {t('common.remove') || t('media.clearSelection') || 'Remove'}
                             </button>
                           </div>
                         </div>
@@ -1356,4 +1451,6 @@ export default function MediaPage({
     </div>
   );
 }
+
+export default memo(MediaPage);
 
