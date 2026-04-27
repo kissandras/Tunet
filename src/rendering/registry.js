@@ -23,6 +23,7 @@ import {
   renderRoomCard,
   renderCameraCard,
   renderSpacerCard,
+  renderCompareCard,
 } from './cards';
 
 /**
@@ -51,6 +52,7 @@ export const CARD_REGISTRY = [
   { prefix: 'camera_card_', renderer: renderCameraCard },
   { prefix: 'alarm_card_', renderer: renderAlarmCard },
   { prefix: 'spacer_card_', renderer: renderSpacerCard },
+  { prefix: 'compare_card_', renderer: renderCompareCard },
 ];
 
 export function dispatchCardRender(cardId, dragProps, getControls, cardStyle, settingsKey, ctx) {

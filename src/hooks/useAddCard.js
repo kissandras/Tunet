@@ -118,6 +118,7 @@ export function useAddCard({
     if (addCardType === 'cover') return t('addCard.available.covers');
     if (addCardType === 'alarm') return t('addCard.available.alarms');
     if (addCardType === 'cost') return t('addCard.available.costs');
+    if (addCardType === 'compare') return t('addCard.available.compare') || 'Select sensors to compare (2–4)';
     if (addCardType === 'media') return t('addCard.available.players');
     if (addCardType === 'sonos') return t('addCard.available.sonos');
     if (addCardType === 'car') return t('addCard.available.cars');

@@ -22,6 +22,7 @@ const rendererMocks = vi.hoisted(() => ({
   renderRoomCard: vi.fn(() => ({ renderer: 'room' })),
   renderCameraCard: vi.fn(() => ({ renderer: 'camera' })),
   renderSpacerCard: vi.fn(() => ({ renderer: 'spacer' })),
+  renderCompareCard: vi.fn(() => ({ renderer: 'compare' })),
 }));
 
 vi.mock('../rendering/cards', () => rendererMocks);

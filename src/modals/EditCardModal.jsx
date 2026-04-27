@@ -732,6 +732,7 @@ export default function EditCardModal({
   isEditCar,
   isEditSpacer,
   isEditCamera,
+  isEditCompare,
   isEditRoom,
   isEditAndroidTV,
   isEditFan,
@@ -3260,6 +3261,59 @@ export default function EditCardModal({
                   <div className="popup-surface min-w-[48px] rounded-xl px-3 py-2 text-center text-sm font-bold tracking-widest text-[var(--text-secondary)] uppercase">
                     {editSettings.decimals ?? 0}
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isEditCompare && (
+            <div className="space-y-4">
+              <div>
+                <label className="ml-4 block pb-2 text-xs font-bold text-[var(--text-muted)] uppercase">
+                  {t('addCard.available.compare') || 'Sensors to compare (2–4)'}
+                </label>
+                <div className="popup-surface custom-scrollbar max-h-52 space-y-2 overflow-y-auto rounded-2xl p-4">
+                  {Object.keys(entities)
+                    .filter((id) => id.startsWith('sensor.') || id.startsWith('input_number.'))
+                    .sort((a, b) =>
+                      (entities[a].attributes?.friendly_name || a).localeCompare(
+                        entities[b].attributes?.friendly_name || b
+                      )
+                    )
+                    .map((sensorId) => {
+                      const currentIds = editSettings.entityIds || [];
+                      const isSelected = currentIds.includes(sensorId);
+                      return (
+                        <div
+                          key={sensorId}
+                          className={`flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors hover:bg-white/5 ${!isSelected && currentIds.length >= 4 ? 'pointer-events-none opacity-40' : ''}`}
+                          onClick={() => {
+                            const updated = isSelected
+                              ? currentIds.filter((id) => id !== sensorId)
+                              : currentIds.length < 4
+                                ? [...currentIds, sensorId]
+                                : currentIds;
+                            if (updated.length >= 2 || isSelected) {
+                              saveCardSetting(editSettingsKey, 'entityIds', updated);
+                            }
+                          }}
+                        >
+                          <div
+                            className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all duration-200 ${isSelected ? 'border-[var(--glass-border)] bg-[var(--glass-bg-hover)]' : 'border-gray-500 bg-transparent'}`}
+                          >
+                            {isSelected && <Check className="h-3.5 w-3.5 text-[var(--accent-color)]" />}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-[var(--text-primary)]">
+                              {entities[sensorId].attributes?.friendly_name || sensorId}
+                            </span>
+                            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                              {sensorId}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             </div>

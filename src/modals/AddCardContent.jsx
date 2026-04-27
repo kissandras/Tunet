@@ -1,5 +1,6 @@
 import {
   ArrowUpDown,
+  BarChart3,
   Bot,
   Calendar,
   Camera,
@@ -344,6 +345,7 @@ function AddCardContent({
       if (addCardType === 'climate') return id.startsWith('climate.');
       if (addCardType === 'alarm') return id.startsWith('alarm_control_panel.');
       if (addCardType === 'androidtv') return id.startsWith('media_player.') || id.startsWith('remote.');
+      if (addCardType === 'compare') return id.startsWith('sensor.') || id.startsWith('input_number.');
       if (addCardType === 'cost') return id.startsWith('sensor.') || id.startsWith('input_number.');
       if (addCardType === 'media') return id.startsWith('media_player.');
       if (addCardType === 'sonos') return id.startsWith('media_player.') && isSonosMediaEntity(entities[id]);
@@ -824,6 +826,7 @@ function AddCardContent({
                   }
                   if (selectedEntitiesSet.has(id))
                     setSelectedEntities((prev) => prev.filter((e) => e !== id));
+                  else if (addCardType === 'compare' && selectedEntities.length >= 4) return;
                   else setSelectedEntities((prev) => [...prev, id]);
                 }}
                 className={`group entity-item flex w-full items-center justify-between rounded-2xl border p-3 text-left transition-colors ${isSelected ? SELECTED_CONTAINER : 'popup-surface popup-surface-hover border-transparent'}`}
@@ -892,6 +895,7 @@ function AddCardContent({
     'sonos',
     'toggle',
     'entity',
+    'compare',
   ].includes(addCardType);
   const usesMultiSelectWithCalendar = usesEntityMultiSelect || addCardType === 'calendar';
 
@@ -1086,12 +1090,24 @@ function AddCardContent({
                   isActive={addCardType === 'spacer'}
                   onSelect={setAddCardType}
                 />
+                <TypeButton
+                  type="compare"
+                  icon={BarChart3}
+                  label={getLabel('addCard.type.compare', 'Compare')}
+                  isActive={addCardType === 'compare'}
+                  onSelect={setAddCardType}
+                />
               </div>
               {addCardType === 'sensor' && (
                 <p className="mt-2 ml-4 text-[11px] text-[var(--text-secondary)] opacity-75">
                   {t('addCard.sensorIncludes') !== 'addCard.sensorIncludes'
                     ? t('addCard.sensorIncludes')
                     : 'Includes binary sensors, sensors, switches, automations, scripts and more.'}
+                </p>
+              )}
+              {addCardType === 'compare' && (
+                <p className="mt-2 ml-4 text-[11px] text-[var(--text-secondary)] opacity-75">
+                  {getLabel('addCard.compareDescription', 'Compare 2–4 sensor histories on one chart.')}
                 </p>
               )}
             </div>
@@ -1134,7 +1150,7 @@ function AddCardContent({
         </div>
 
         <div className="mt-6 flex flex-col gap-3 border-t border-[var(--glass-border)] pt-6">
-          {usesMultiSelectWithCalendar && selectedEntities.length > 0 && (
+          {usesMultiSelectWithCalendar && selectedEntities.length > 0 && addCardType !== 'compare' && (
             <button onClick={onAddSelected} className={PRIMARY_ADD_BUTTON}>
               <Plus className="h-5 w-5" />{' '}
               {addCardType === 'media'
@@ -1147,6 +1163,17 @@ function AddCardContent({
                     ? `${t('addCard.add')} ${selectedEntities.length} ${t('addCard.cameraCard') || 'camera cards'}`
                     : `${t('addCard.add')} ${selectedEntities.length} ${t('addCard.cards')}`}
             </button>
+          )}
+          {addCardType === 'compare' && selectedEntities.length >= 2 && (
+            <button onClick={onAddSelected} className={PRIMARY_ADD_BUTTON}>
+              <Plus className="h-5 w-5" />{' '}
+              {`${t('addCard.add')} ${getLabel('addCard.type.compare', 'Compare')} (${selectedEntities.length})`}
+            </button>
+          )}
+          {addCardType === 'compare' && selectedEntities.length > 0 && selectedEntities.length < 2 && (
+            <p className="text-center text-xs text-[var(--text-muted)]">
+              {getLabel('addCard.compareMinEntities', 'Select at least 2 sensors to compare')}
+            </p>
           )}
           {addCardType === 'cost' && selectedCostTodayId && selectedCostMonthId && (
             <button onClick={onAddSelected} className={PRIMARY_ADD_BUTTON}>

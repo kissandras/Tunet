@@ -230,6 +230,14 @@ export const handleAddSelected = (ctx) => {
       return;
     }
 
+    case 'compare': {
+      if (selectedEntities.length < 2) return;
+      const cardId = `compare_card_${Date.now()}`;
+      commitSingleCard(cardId, { entityIds: [...selectedEntities] });
+      setSelectedEntities([]);
+      return;
+    }
+
     case 'nordpool': {
       if (!selectedNordpoolId) return;
       const cardId = `nordpool_card_${Date.now()}`;
