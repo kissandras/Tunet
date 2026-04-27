@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.16.3] — 2026-04-27
+
+### Added
+- Compare card and person history
+
+### Changed
+- Add release notes.
+
+### Fixed
+- Add release notes.
+
+
 ## [1.16.2] — 2026-04-24
 
 ### Added
