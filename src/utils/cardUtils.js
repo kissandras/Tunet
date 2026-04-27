@@ -33,6 +33,7 @@ const REMOVABLE_PREFIXES = [
   'camera_card_',
   'alarm_card_',
   'spacer_card_',
+  'compare_card_',
   'fan.',
 ];
 
@@ -54,6 +55,7 @@ const SPECIAL_CARD_PREFIXES = [
   'camera_card_',
   'alarm_card_',
   'spacer_card_',
+  'compare_card_',
 ];
 
 /**
