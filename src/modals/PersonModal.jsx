@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { X, MapPin, Battery } from '../icons';
@@ -11,6 +11,7 @@ import {
   convertValueByKind,
   formatUnitValue,
 } from '../utils';
+import { getHistory } from '../services/haClient';
 
 export default function PersonModal({
   show,
@@ -20,7 +21,7 @@ export default function PersonModal({
   entities,
   customName,
   getEntityImageUrl,
-  conn: _conn,
+  conn,
   t,
   settings,
 }) {
@@ -218,6 +219,96 @@ export default function PersonModal({
   const mapInstanceRef = useRef(null);
   const tileLayerRef = useRef(null);
   const markerRef = useRef(null);
+  const historyLayerRef = useRef(null);
+
+  // History trail settings
+  const showHistory = settings?.showHistory ?? false;
+  const historyHours = Math.max(1, Math.min(48, Number(settings?.historyHours) || 8));
+  const [historyPoints, setHistoryPoints] = useState([]);
+
+  // Fetch location history
+  const fetchHistory = useCallback(async () => {
+    if (!show || !showHistory || !conn || !trackedEntityId) return;
+    try {
+      const end = new Date();
+      const start = new Date(end.getTime() - historyHours * 3600000);
+      const history = await getHistory(conn, {
+        start,
+        end,
+        entityId: trackedEntityId,
+        no_attributes: false,
+      });
+      const points = history
+        .filter((entry) => {
+          const lat = parseFloat(entry.attributes?.latitude ?? entry.a?.latitude);
+          const lon = parseFloat(entry.attributes?.longitude ?? entry.a?.longitude);
+          return Number.isFinite(lat) && Number.isFinite(lon);
+        })
+        .map((entry) => ({
+          lat: parseFloat(entry.attributes?.latitude ?? entry.a?.latitude),
+          lon: parseFloat(entry.attributes?.longitude ?? entry.a?.longitude),
+          time: new Date(entry.last_changed || entry.lu || entry.last_updated).getTime(),
+        }));
+      setHistoryPoints(points);
+    } catch (err) {
+      console.warn('Failed to fetch person location history:', err);
+      setHistoryPoints([]);
+    }
+  }, [show, showHistory, conn, trackedEntityId, historyHours]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  // Draw history trail on map
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !showHistory || historyPoints.length < 2) {
+      if (historyLayerRef.current) {
+        historyLayerRef.current.clearLayers();
+      }
+      return;
+    }
+
+    if (!historyLayerRef.current) {
+      historyLayerRef.current = L.layerGroup().addTo(map);
+    } else {
+      historyLayerRef.current.clearLayers();
+    }
+
+    const minTime = historyPoints[0].time;
+    const maxTime = historyPoints[historyPoints.length - 1].time;
+    const timeRange = maxTime - minTime || 1;
+
+    for (let i = 0; i < historyPoints.length - 1; i++) {
+      const p1 = historyPoints[i];
+      const p2 = historyPoints[i + 1];
+      const progress = (p1.time - minTime) / timeRange;
+      const opacity = 0.15 + progress * 0.7;
+      L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
+        color: '#3b82f6',
+        weight: 3,
+        opacity,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(historyLayerRef.current);
+    }
+
+    // Fit map to show the trail + current position
+    const allLats = historyPoints.map((p) => p.lat);
+    const allLons = historyPoints.map((p) => p.lon);
+    if (currentLat && currentLon) {
+      allLats.push(currentLat);
+      allLons.push(currentLon);
+    }
+    const bounds = L.latLngBounds(
+      [Math.min(...allLats), Math.min(...allLons)],
+      [Math.max(...allLats), Math.max(...allLons)]
+    );
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+    }
+  }, [historyPoints, showHistory, currentLat, currentLon]);
 
   // Map Initialization & Updates
   useEffect(() => {
@@ -279,6 +370,8 @@ export default function PersonModal({
       mapInstanceRef.current = null;
       markerRef.current = null;
       tileLayerRef.current = null;
+      historyLayerRef.current = null;
+      setHistoryPoints([]);
     }
   }, [show]);
 

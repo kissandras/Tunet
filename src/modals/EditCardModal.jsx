@@ -1922,6 +1922,49 @@ export default function EditCardModal({
                     />
                   </button>
                 </div>
+
+                <div className="popup-surface flex items-center justify-between rounded-2xl p-4">
+                  <span className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase">
+                    {t('person.showHistory')}
+                  </span>
+                  <button
+                    onClick={() =>
+                      editSettingsKey &&
+                      saveCardSetting(
+                        editSettingsKey,
+                        'showHistory',
+                        !editSettings.showHistory
+                      )
+                    }
+                    className={`relative h-6 w-12 rounded-full transition-colors ${editSettings.showHistory ? 'border border-[var(--glass-border)] bg-[var(--glass-bg-hover)]' : 'bg-[var(--glass-bg-hover)]'}`}
+                  >
+                    <div
+                      className={`absolute top-1 h-4 w-4 rounded-full bg-[var(--text-primary)] transition-all ${editSettings.showHistory ? 'left-7' : 'left-1'}`}
+                    />
+                  </button>
+                </div>
+
+                {editSettings.showHistory && (
+                  <div className="popup-surface flex items-center justify-between rounded-2xl p-4">
+                    <span className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase">
+                      {t('person.historyHours')}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={48}
+                        value={editSettings.historyHours || 8}
+                        onChange={(e) => {
+                          const val = Math.max(1, Math.min(48, parseInt(e.target.value) || 8));
+                          editSettingsKey && saveCardSetting(editSettingsKey, 'historyHours', val);
+                        }}
+                        className="w-16 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-1 text-center text-sm font-bold text-[var(--text-primary)] outline-none"
+                      />
+                      <span className="text-xs text-[var(--text-muted)]">h</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">

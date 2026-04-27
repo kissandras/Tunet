@@ -588,6 +588,7 @@
   "person.showState": "显示状态",
   "person.showZoneBadgeIcon": "在徽章中显示区域图标",
   "person.showHistory": "在地图上显示历史记录",
+  "person.historyHours": "显示小时数",
   "person.showLastUpdated": "显示上次更新",
   "person.showTrackerTelemetry": "显示 GPS/速度/航向",
   "person.showDistanceFromHome": "显示离家的距离",

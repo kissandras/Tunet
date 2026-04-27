@@ -684,6 +684,7 @@
   "person.showState": "Vis status",
   "person.showZoneBadgeIcon": "Vis soneikon i badge",
   "person.showHistory": "Vis historikk på kart",
+  "person.historyHours": "Timar å vise",
   "person.showLastUpdated": "Vis sist oppdatert",
   "person.showTrackerTelemetry": "Vis GPS/Fart/Kurs",
   "person.showDistanceFromHome": "Vis avstand frå heim",

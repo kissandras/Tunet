@@ -684,6 +684,7 @@
   "person.showState": "Afficher l'état",
   "person.showZoneBadgeIcon": "Afficher l'icône de zone dans le badge",
   "person.showHistory": "Afficher l'historique sur la carte",
+  "person.historyHours": "Heures à afficher",
   "person.showLastUpdated": "Afficher la dernière mise à jour",
   "person.showTrackerTelemetry": "Afficher GPS/Vitesse/Cap",
   "person.showDistanceFromHome": "Afficher la distance depuis le domicile",

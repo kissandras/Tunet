@@ -684,6 +684,7 @@
   "person.showState": "Show State",
   "person.showZoneBadgeIcon": "Show Zone Icon in Badge",
   "person.showHistory": "Show History on Map",
+  "person.historyHours": "Hours to Show",
   "person.showLastUpdated": "Show Last Updated",
   "person.showTrackerTelemetry": "Show GPS/Speed/Heading",
   "person.showDistanceFromHome": "Show Distance from Home",

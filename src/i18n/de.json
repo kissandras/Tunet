@@ -670,6 +670,7 @@
   "person.showState": "Status anzeigen",
   "person.showZoneBadgeIcon": "Zonensymbol im Badge anzeigen",
   "person.showHistory": "Verlauf auf Karte anzeigen",
+  "person.historyHours": "Anzuzeigende Stunden",
   "person.showLastUpdated": "Zuletzt aktualisiert anzeigen",
   "person.showTrackerTelemetry": "GPS/Geschwindigkeit/Kurs anzeigen",
   "person.showDistanceFromHome": "Entfernung von Zuhause anzeigen",
