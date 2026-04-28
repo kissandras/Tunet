@@ -1,5 +1,5 @@
 export const DEFAULT_LANGUAGE = 'en';
-export const SUPPORTED_LANGUAGES = ['en', 'nb', 'nn', 'sv', 'de', 'zh', 'fr'];
+export const SUPPORTED_LANGUAGES = ['en', 'nb', 'nn', 'sv', 'de', 'zh', 'fr', 'hu'];
 export const LEGACY_NN_MIGRATION_FLAG = 'tunet_language_migrated_to_nb';
 
 export function normalizeLanguage(language) {
@@ -13,5 +13,6 @@ export function getLocaleForLanguage(language) {
   if (language === 'de') return 'de-DE';
   if (language === 'zh') return 'zh-CN';
   if (language === 'fr') return 'fr-FR';
+  if (language === 'hu') return 'hu-HU';
   return 'en-US';
 }

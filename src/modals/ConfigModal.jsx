@@ -1066,7 +1066,7 @@ export default function ConfigModal({
             <ModernDropdown
               label={t('settings.language')}
               icon={Globe}
-              options={['en', 'nb', 'nn', 'sv', 'de', 'zh', 'fr']}
+              options={['en', 'nb', 'nn', 'sv', 'de', 'zh', 'fr', 'hu']}
               current={language}
               onChange={setLanguage}
               map={{
@@ -1077,6 +1077,7 @@ export default function ConfigModal({
                 de: t('language.de'),
                 zh: t('language.zh'),
                 fr: t('language.fr'),
+                hu: t('language.hu'),
               }}
               placeholder={t('dropdown.noneSelected')}
             />
@@ -2027,7 +2028,7 @@ export default function ConfigModal({
                       <ModernDropdown
                         label={t('settings.language')}
                         icon={Globe}
-                        options={['en', 'nb', 'nn', 'sv', 'de', 'zh', 'fr']}
+                        options={['en', 'nb', 'nn', 'sv', 'de', 'zh', 'fr', 'hu']}
                         current={language}
                         onChange={setLanguage}
                         map={{
@@ -2038,6 +2039,7 @@ export default function ConfigModal({
                           de: t('language.de'),
                           zh: t('language.zh'),
                           fr: t('language.fr'),
+                          hu: t('language.hu'),
                         }}
                         placeholder={t('dropdown.noneSelected')}
                       />

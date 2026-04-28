@@ -5,6 +5,7 @@ export { default as sv } from './sv.json';
 export { default as de } from './de.json';
 export { default as zh } from './zh.json';
 export { default as fr } from './fr.json';
+export { default as hu } from './hu.json';
 export {
   DEFAULT_LANGUAGE,
   SUPPORTED_LANGUAGES,
