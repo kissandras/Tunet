@@ -266,6 +266,7 @@ export default function PersonModal({
   const showHistory = settings?.showHistory ?? false;
   const historyHours = Math.max(1, Math.min(48, Number(settings?.historyHours) || 8));
   const [historyPoints, setHistoryPoints] = useState([]);
+  const [mapReady, setMapReady] = useState(false);
 
   // Fetch location history
   const fetchHistory = useCallback(async () => {
@@ -349,7 +350,7 @@ export default function PersonModal({
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
     }
-  }, [historyPoints, showHistory, currentLat, currentLon]);
+  }, [historyPoints, showHistory, currentLat, currentLon, mapReady]);
 
   // Map Initialization & Updates
   useEffect(() => {
@@ -371,6 +372,7 @@ export default function PersonModal({
         }).addTo(map);
 
         mapInstanceRef.current = map;
+        setMapReady(true);
         // Invalidate size to ensure it fills container
         setTimeout(() => map.invalidateSize(), 100);
       } else {
@@ -413,6 +415,7 @@ export default function PersonModal({
       tileLayerRef.current = null;
       historyLayerRef.current = null;
       setHistoryPoints([]);
+      setMapReady(false);
     }
   }, [show]);
 
