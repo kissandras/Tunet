@@ -58,6 +58,7 @@ export default function WeatherGraph({
     if (!history || history.length === 0) return [];
 
     const historyAgo = new Date(Date.now() - historyHours * 60 * 60 * 1000);
+    const historyAhead = new Date(Date.now() + historyHours * 60 * 60 * 1000);
 
     // Process history
     let points = history
@@ -65,7 +66,7 @@ export default function WeatherGraph({
         time: new Date(d.last_updated),
         temp: parseFloat(d.state),
       }))
-      .filter((p) => !isNaN(p.temp) && p.time >= historyAgo)
+      .filter((p) => !isNaN(p.temp) && p.time >= historyAgo && p.time <= historyAhead)
       .sort((a, b) => a.time - b.time);
 
     // Add current time point
