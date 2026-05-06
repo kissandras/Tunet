@@ -191,7 +191,8 @@ export default function DashboardGrid({ page, media, grid, cards, actions, t }) 
           const placement = gridLayout[id];
           const isCalendarCard = id.startsWith('calendar_card_');
           const isTodoCard = id.startsWith('todo_card_');
-          const isLargeCard = isCalendarCard || isTodoCard;
+          const isCompareCard = id.startsWith('compare_card_');
+          const isLargeCard = isCalendarCard || isTodoCard || isCompareCard;
           const sizeSetting = isLargeCard
             ? cardSettings[getCardSettingsKey(id)]?.size || cardSettings[id]?.size
             : null;

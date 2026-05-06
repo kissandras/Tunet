@@ -37,10 +37,11 @@ const RESIZABLE_PREFIXES = [
   'fan.',
   'fan_card_',
   'alarm_card_',
+  'compare_card_',
 ];
 
 /** Prefixes that cycle through 3 sizes (small → medium → large). */
-const TRIPLE_SIZE_PREFIXES = ['calendar_card_', 'todo_card_'];
+const TRIPLE_SIZE_PREFIXES = ['calendar_card_', 'todo_card_', 'compare_card_'];
 
 function canResize(editId, settings) {
   if (editId === 'car') return true;

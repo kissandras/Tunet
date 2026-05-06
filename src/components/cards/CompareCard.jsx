@@ -40,6 +40,7 @@ const CompareCard = memo(function CompareCard({
   const { haConfig } = useHomeAssistantMeta();
   const effectiveUnitMode = getEffectiveUnitMode(unitsMode, haConfig);
   const isSmall = settings?.size === 'small';
+  const isMedium = settings?.size === 'medium';
 
   const resolvedEntities = useMemo(
     () =>
@@ -267,10 +268,17 @@ const CompareCard = memo(function CompareCard({
         {Icon && <Icon size={140} />}
       </div>
 
-      {/* Chart as background layer pinned to bottom */}
+      {/* Bottom-anchored chart area (responsive height) */}
       {historySeries.length > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-28">
-          <MultiSparkLine series={historySeries} height={112} fade />
+        <div
+          className={`pointer-events-none absolute inset-x-1 bottom-1 z-0 ${isMedium ? 'top-[56%]' : 'top-[20%]'}`}
+        >
+          <MultiSparkLine
+            series={historySeries}
+            height={isMedium ? 120 : 350}
+            compact={isMedium}
+            fade={isMedium}
+          />
         </div>
       )}
 
@@ -308,7 +316,7 @@ const CompareCard = memo(function CompareCard({
                 className="inline-block h-1.5 w-1.5 rounded-full"
                 style={{ backgroundColor: SERIES_COLORS[idx % SERIES_COLORS.length] }}
               />
-              <span className="max-w-[5rem] truncate text-[9px] font-bold tracking-wide text-[var(--text-secondary)] uppercase opacity-70">
+              <span className="max-w-[10rem] truncate text-[9px] font-bold tracking-wide text-[var(--text-secondary)] uppercase opacity-70">
                 {re.name}
               </span>
               <span className={`${isMobile ? 'text-base' : 'text-lg'} leading-none font-thin whitespace-nowrap text-[var(--text-primary)] tabular-nums`}>
