@@ -747,6 +747,7 @@ export default function EditCardModal({
   isEditCar,
   isEditSpacer,
   isEditCamera,
+  isEditCompare,
   isEditRoom,
   isEditAndroidTV,
   isEditFan,
