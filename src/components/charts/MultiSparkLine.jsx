@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
+import { CHART_STATUS_COLORS } from '../../utils/chartColors';
 
 const SERIES_COLORS = [
-  'var(--accent-color)',
   'var(--status-info-fg)',
   'var(--status-warning-fg)',
+  'var(--accent-color)',
   'var(--status-error-fg)',
 ];
 
@@ -29,8 +30,15 @@ const createBezierPath = (points, smoothing = 0.3) => {
   }, '');
 };
 
-export default function MultiSparkLine({ series = [], height = 96, fade = false }) {
+export default function MultiSparkLine({
+  series = [],
+  height = 200,
+  fade = false,
+  formatXLabel,
+  compact = false,
+}) {
   const idSuffix = useMemo(() => Math.random().toString(36).substr(2, 9), []);
+  const fadeGradientId = `multiFade-${idSuffix}`;
   const maskId = `multiMask-${idSuffix}`;
 
   const validSeries = series.filter((s) => Array.isArray(s.data) && s.data.length > 0);
@@ -38,13 +46,12 @@ export default function MultiSparkLine({ series = [], height = 96, fade = false 
   const processed = useMemo(() => {
     if (validSeries.length === 0) return null;
 
-    const width = 300;
-    const lineStrokeWidth = 2.5;
-    const pointRadius = 3;
-    const verticalPadding = Math.max(4, Math.ceil(pointRadius + lineStrokeWidth / 2));
-    const chartTop = verticalPadding;
-    const chartBottom = height - verticalPadding;
-    const chartHeight = Math.max(1, chartBottom - chartTop);
+    const width = 600;
+    const padding = compact
+      ? { top: 4, right: 4, bottom: 4, left: 4 }
+      : { top: 20, right: 20, bottom: 30, left: 40 };
+    const graphWidth = width - padding.left - padding.right;
+    const graphHeight = Math.max(1, height - padding.top - padding.bottom);
 
     // Smooth each series and find global min/max
     let globalMin = Infinity;
@@ -78,7 +85,16 @@ export default function MultiSparkLine({ series = [], height = 96, fade = false 
       globalMin = mid - minRange / 2;
       globalMax = mid + minRange / 2;
     }
-    const snapStep = rawRange <= 2 ? 0.5 : rawRange <= 5 ? 1 : rawRange <= 20 ? 2 : 5;
+    // Snap min/max to nice round numbers (match SensorHistoryGraph behaviour)
+    const snapStep = (() => {
+      const r = globalMax - globalMin;
+      if (r <= 2) return 0.5;
+      if (r <= 5) return 1;
+      if (r <= 20) return 2;
+      if (r <= 50) return 5;
+      if (r <= 200) return 10;
+      return 50;
+    })();
     globalMin = Math.floor(globalMin / snapStep) * snapStep;
     globalMax = Math.ceil(globalMax / snapStep) * snapStep;
     const range = globalMax - globalMin || 1;
@@ -87,68 +103,177 @@ export default function MultiSparkLine({ series = [], height = 96, fade = false 
       const color = s.color || SERIES_COLORS[si % SERIES_COLORS.length];
       const values = s.values;
       const points = values.map((v, i) => [
-        values.length === 1 ? width / 2 : (i / (values.length - 1)) * width,
-        chartBottom - ((v - globalMin) / range) * chartHeight,
+        padding.left +
+          (values.length === 1 ? graphWidth / 2 : (i / (values.length - 1)) * graphWidth),
+        padding.top + graphHeight - ((v - globalMin) / range) * graphHeight,
       ]);
       const pathData = createBezierPath(points, 0.3);
-      const areaData = `${pathData} L ${width},${chartBottom} L 0,${chartBottom} Z`;
-      const lastPoint = points[points.length - 1];
-      return { color, pathData, areaData, lastPoint, label: s.label };
+      const areaData = `${pathData} L ${padding.left + graphWidth},${height} L ${padding.left},${height} Z`;
+      const lastValue = values[values.length - 1];
+      const lastNormalized = (lastValue - globalMin) / range;
+      const areaId = `multiArea-${idSuffix}-${si}`;
+      const lineId = `multiLine-${idSuffix}-${si}`;
+      return {
+        color,
+        pathData,
+        areaData,
+        lastNormalized,
+        label: s.label,
+        areaId,
+        lineId,
+        sourceData: s.data,
+      };
     });
 
-    return { width, chartBottom, lineStrokeWidth, pointRadius, paths };
-  }, [validSeries, height]);
+    const yLabels = [
+      { value: globalMax, y: padding.top },
+      { value: (globalMax + globalMin) / 2, y: padding.top + graphHeight / 2 },
+      { value: globalMin, y: padding.top + graphHeight },
+    ];
+
+    const longestSeries = smoothed.reduce(
+      (best, s) => (s.data.length > best.length ? s.data : best),
+      []
+    );
+    const xLabels = [];
+    const numLabels = 5;
+    for (let i = 0; i < numLabels; i++) {
+      const fraction = i / (numLabels - 1);
+      const index = Math.round(fraction * (longestSeries.length - 1));
+      const point = longestSeries[index];
+      if (point && point.time) {
+        const x = padding.left + fraction * graphWidth;
+        const dt = new Date(point.time);
+        const label = formatXLabel
+          ? formatXLabel(dt)
+          : dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const anchor = i === 0 ? 'start' : i === numLabels - 1 ? 'end' : 'middle';
+        xLabels.push({ x, label, anchor });
+      }
+    }
+
+    return { width, height, padding, graphWidth, paths, yLabels, xLabels };
+  }, [validSeries, height, idSuffix, formatXLabel, compact]);
 
   if (!processed || processed.paths.length === 0) return null;
 
-  const { width, lineStrokeWidth, pointRadius, paths } = processed;
+  const { width, padding, graphWidth, paths, yLabels, xLabels } = processed;
+  const isSingleSeries = paths.length === 1;
 
   return (
-    <div className="relative mt-1 opacity-80 transition-all duration-700 group-hover:opacity-100">
+    <div className="relative h-full w-full select-none">
       <svg
-        width="100%"
-        height={height}
         viewBox={`0 0 ${width} ${height}`}
+        className="h-full w-full overflow-visible"
         preserveAspectRatio="none"
-        className="overflow-visible"
+        height={height}
+        width="100%"
       >
         <defs>
-          <linearGradient id={maskId} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={fadeGradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="white" stopOpacity="1" />
-            <stop offset="70%" stopColor="white" stopOpacity="0.5" />
+            <stop offset="80%" stopColor="white" stopOpacity="0.6" />
             <stop offset="100%" stopColor="white" stopOpacity="0" />
           </linearGradient>
-          <mask id={`${maskId}-use`}>
-            <rect x="0" y="0" width={width} height={height} fill={`url(#${maskId})`} />
+          <mask id={maskId}>
+            <rect x="0" y="0" width={width} height={height} fill={`url(#${fadeGradientId})`} />
           </mask>
+          {paths.map((s) => (
+            <linearGradient key={s.areaId} id={s.areaId} x1="0" y1="0" x2="0" y2="1">
+              {isSingleSeries ? (
+                <>
+                  <stop offset="0%" stopColor={CHART_STATUS_COLORS.high} stopOpacity="0.25" />
+                  <stop offset="50%" stopColor={CHART_STATUS_COLORS.mid} stopOpacity="0.12" />
+                  <stop offset="100%" stopColor={CHART_STATUS_COLORS.low} stopOpacity="0.02" />
+                </>
+              ) : (
+                <>
+                  <stop offset="0%" stopColor={s.color} stopOpacity="0.22" />
+                  <stop offset="50%" stopColor={s.color} stopOpacity="0.1" />
+                  <stop offset="100%" stopColor={s.color} stopOpacity="0.02" />
+                </>
+              )}
+            </linearGradient>
+          ))}
+          {isSingleSeries &&
+            paths.map((s) => (
+              <linearGradient key={s.lineId} id={s.lineId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={CHART_STATUS_COLORS.high} />
+                <stop offset="50%" stopColor={CHART_STATUS_COLORS.mid} />
+                <stop offset="100%" stopColor={CHART_STATUS_COLORS.low} />
+              </linearGradient>
+            ))}
         </defs>
 
+        {/* Subtle dashed grid lines */}
+        {!compact &&
+          yLabels.map((label, i) => (
+            <line
+              key={`grid-${i}`}
+              x1={padding.left}
+              y1={label.y}
+              x2={padding.left + graphWidth}
+              y2={label.y}
+              stroke="currentColor"
+              strokeOpacity="0.05"
+              strokeDasharray="4 4"
+            />
+          ))}
+
+        {/* Area fills */}
         {paths.map((s, i) => (
-          <g key={i}>
-            <path
-              d={s.areaData}
-              fill={s.color}
-              fillOpacity="0.08"
-              mask={`url(#${maskId}-use)`}
-            />
-            <path
-              d={s.pathData}
-              fill="none"
-              stroke={s.color}
-              strokeWidth={lineStrokeWidth}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeOpacity="0.85"
-            />
-            <circle
-              cx={s.lastPoint[0]}
-              cy={s.lastPoint[1]}
-              r={pointRadius}
-              fill={s.color}
-              className="animate-pulse"
-            />
-          </g>
+          <path
+            key={`area-${i}`}
+            d={s.areaData}
+            fill={`url(#${s.areaId})`}
+            mask={`url(#${maskId})`}
+          />
         ))}
+
+        {/* Lines */}
+        {paths.map((s, i) => (
+          <path
+            key={`line-${i}`}
+            d={s.pathData}
+            fill="none"
+            stroke={isSingleSeries ? `url(#${s.lineId})` : s.color}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.9"
+          />
+        ))}
+
+        {/* Y-axis labels */}
+        {!compact &&
+          yLabels.map((label, i) => (
+            <text
+              key={`y-${i}`}
+              x={padding.left - 8}
+              y={label.y}
+              textAnchor="end"
+              dominantBaseline="middle"
+              className="fill-current font-mono text-[10px] tracking-tighter opacity-60"
+              style={{ fill: 'var(--text-secondary)' }}
+            >
+              {label.value.toFixed(1)}
+            </text>
+          ))}
+
+        {/* X-axis labels */}
+        {!compact &&
+          xLabels.map((l, i) => (
+            <text
+              key={`x-${i}`}
+              x={l.x}
+              y={height - 5}
+              textAnchor={l.anchor}
+              className="fill-current font-mono text-[10px] tracking-tighter opacity-60"
+              style={{ fill: 'var(--text-secondary)' }}
+            >
+              {l.label}
+            </text>
+          ))}
       </svg>
       {fade && (
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--glass-bg)] opacity-60" />
