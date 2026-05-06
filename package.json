@@ -4,7 +4,7 @@
   "version": "1.18.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oyvhov/tunet.git"
+    "url": "git+https://github.com/kissandras/Tunet.git"
   },
   "license": "GPL-3.0",
   "type": "module",
